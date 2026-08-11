@@ -1,0 +1,366 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import {
+  Trip,
+  POI,
+  POICategory,
+  POI_CATEGORY_LABELS,
+  POI_CATEGORY_DEFAULT_SLOTS,
+  SLOTS,
+  SLOT_LABELS,
+  Slot,
+} from "@/lib/types";
+import { assignPOI, unassignPOI, refreshPOIDiscovery } from "@/app/actions/trip-actions";
+import { addPOI, deletePOI, listPOIs } from "@/app/actions/poi-actions";
+import { adminLogout } from "@/app/actions/admin-actions";
+import { formatDateRange, formatDayLabel } from "@/lib/dates";
+import { Card, Input, Label } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+
+export function AdminDashboard({
+  initialTrips,
+  initialPOIs,
+}: {
+  initialTrips: Trip[];
+  initialPOIs: POI[];
+}) {
+  const [trips, setTrips] = useState(initialTrips);
+  const [pois, setPois] = useState(initialPOIs);
+  const [selectedTripId, setSelectedTripId] = useState<string | null>(
+    initialTrips[0]?.id ?? null
+  );
+  const [selectedDay, setSelectedDay] = useState(0);
+  const [showAddPOI, setShowAddPOI] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshMsg, setRefreshMsg] = useState<string | null>(null);
+
+  const selectedTrip = trips.find((t) => t.id === selectedTripId) ?? null;
+  const day = selectedTrip?.itinerary[selectedDay];
+
+  function updateTripItinerary(
+    tripId: string,
+    dayIndex: number,
+    slot: Slot,
+    updater: (ids: string[]) => string[]
+  ) {
+    setTrips((prev) =>
+      prev.map((t) => {
+        if (t.id !== tripId) return t;
+        const itinerary = t.itinerary.map((d, i) =>
+          i === dayIndex ? { ...d, [slot]: updater(d[slot]) } : d
+        );
+        return { ...t, itinerary };
+      })
+    );
+  }
+
+  async function handleAssign(slot: Slot, poiId: string) {
+    if (!selectedTrip || !poiId) return;
+    updateTripItinerary(selectedTrip.id, selectedDay, slot, (ids) =>
+      ids.includes(poiId) ? ids : [...ids, poiId]
+    );
+    await assignPOI(selectedTrip.id, selectedDay, slot, poiId);
+  }
+
+  async function handleUnassign(slot: Slot, poiId: string) {
+    if (!selectedTrip) return;
+    updateTripItinerary(selectedTrip.id, selectedDay, slot, (ids) =>
+      ids.filter((id) => id !== poiId)
+    );
+    await unassignPOI(selectedTrip.id, selectedDay, slot, poiId);
+  }
+
+  async function handleDeletePOI(poiId: string) {
+    setPois((prev) => prev.filter((p) => p.id !== poiId));
+    setTrips((prev) =>
+      prev.map((t) => ({
+        ...t,
+        itinerary: t.itinerary.map((d) => {
+          const next = { ...d };
+          for (const s of SLOTS) next[s] = next[s].filter((id) => id !== poiId);
+          return next;
+        }),
+      }))
+    );
+    await deletePOI(poiId);
+  }
+
+  const poiById = useMemo(() => new Map(pois.map((p) => [p.id, p])), [pois]);
+
+  return (
+    <main className="flex-1 bg-gradient-to-b from-sky to-white">
+      <header className="border-b border-gray-100 bg-white">
+        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+          <h1 className="font-bold">Gestionale POI</h1>
+          <form action={adminLogout}>
+            <button className="text-xs text-gray-400 hover:text-gray-600">Esci</button>
+          </form>
+        </div>
+      </header>
+
+      <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+        {trips.length === 0 ? (
+          <Card className="p-8 text-center text-sm text-gray-400">
+            Nessun viaggio creato ancora.
+          </Card>
+        ) : (
+          <>
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {trips.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => {
+                    setSelectedTripId(t.id);
+                    setSelectedDay(0);
+                  }}
+                  className={`shrink-0 rounded-2xl px-4 py-2 text-left text-sm transition-colors ${
+                    selectedTripId === t.id
+                      ? "bg-sunset text-white"
+                      : "bg-white border border-gray-200 hover:bg-gray-50"
+                  }`}
+                >
+                  <div className="font-semibold">{t.destination}</div>
+                  <div className="text-xs opacity-75">
+                    {formatDateRange(t.startDate, t.endDate)}
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {selectedTrip && (
+              <div className="grid md:grid-cols-5 gap-6">
+                <div className="md:col-span-2 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-sm font-bold text-gray-700">
+                      Catalogo POI ({pois.length})
+                    </h2>
+                    <button
+                      onClick={() => setShowAddPOI((v) => !v)}
+                      className="text-xs font-semibold text-sunset-dark hover:underline"
+                    >
+                      {showAddPOI ? "Chiudi" : "+ Nuovo POI"}
+                    </button>
+                  </div>
+
+                  <button
+                    disabled={refreshing}
+                    onClick={async () => {
+                      setRefreshing(true);
+                      setRefreshMsg(null);
+                      const added = await refreshPOIDiscovery(selectedTrip.id);
+                      setPois(await listPOIs());
+                      setRefreshMsg(
+                        added > 0 ? `+${added} nuovi POI suggeriti` : "Nessun nuovo POI trovato"
+                      );
+                      setRefreshing(false);
+                    }}
+                    className="w-full text-xs font-semibold text-lagoon-dark bg-lagoon/10 hover:bg-lagoon/20 rounded-full px-3 py-2 disabled:opacity-50"
+                  >
+                    {refreshing ? "Ricerca in corso…" : "🔎 Rigenera suggerimenti POI (OSM)"}
+                  </button>
+                  {refreshMsg && (
+                    <p className="text-xs text-gray-400 text-center">{refreshMsg}</p>
+                  )}
+
+                  {showAddPOI && (
+                    <AddPOIForm
+                      defaultLat={selectedTrip.lat}
+                      defaultLon={selectedTrip.lon}
+                      onAdd={async (input) => {
+                        const created = await addPOI(input);
+                        setPois((prev) => [...prev, created]);
+                        setShowAddPOI(false);
+                      }}
+                    />
+                  )}
+
+                  <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
+                    {pois.map((poi) => (
+                      <Card key={poi.id} className="p-3 flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{poi.name}</p>
+                          <p className="text-xs text-gray-400">
+                            {POI_CATEGORY_LABELS[poi.category]}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => handleDeletePOI(poi.id)}
+                          className="text-xs text-red-400 hover:text-red-600 shrink-0"
+                        >
+                          Rimuovi
+                        </button>
+                      </Card>
+                    ))}
+                    {pois.length === 0 && (
+                      <p className="text-sm text-gray-300">Nessun POI nel catalogo.</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="md:col-span-3 space-y-3">
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {selectedTrip.itinerary.map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setSelectedDay(i)}
+                        className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                          selectedDay === i
+                            ? "bg-lagoon text-white"
+                            : "bg-white border border-gray-200 hover:bg-gray-50"
+                        }`}
+                      >
+                        Giorno {i + 1}{" "}
+                        <span className="opacity-70 text-xs ml-1">
+                          {formatDayLabel(selectedTrip.startDate, i)}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="space-y-3">
+                    {SLOTS.map((slot) => {
+                      const assignedIds = day?.[slot] ?? [];
+                      const available = pois.filter(
+                        (p) => p.validSlots.includes(slot) && !assignedIds.includes(p.id)
+                      );
+                      return (
+                        <Card key={slot} className="p-4">
+                          <h3 className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-2">
+                            {SLOT_LABELS[slot]}
+                          </h3>
+                          <ul className="space-y-1.5 mb-2">
+                            {assignedIds.map((id) => {
+                              const poi = poiById.get(id);
+                              if (!poi) return null;
+                              return (
+                                <li
+                                  key={id}
+                                  className="flex items-center justify-between gap-2 text-sm bg-sand/60 rounded-xl px-3 py-1.5"
+                                >
+                                  {poi.name}
+                                  <button
+                                    onClick={() => handleUnassign(slot, id)}
+                                    className="text-gray-400 hover:text-red-500"
+                                  >
+                                    ×
+                                  </button>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                          <select
+                            value=""
+                            onChange={(e) => handleAssign(slot, e.target.value)}
+                            className="w-full rounded-xl border border-gray-200 text-sm px-3 py-2 outline-none focus:border-lagoon"
+                          >
+                            <option value="">+ Aggiungi POI…</option>
+                            {available.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.name}
+                              </option>
+                            ))}
+                          </select>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </main>
+  );
+}
+
+function AddPOIForm({
+  defaultLat,
+  defaultLon,
+  onAdd,
+}: {
+  defaultLat: number;
+  defaultLon: number;
+  onAdd: (input: {
+    name: string;
+    category: POICategory;
+    lat: number;
+    lon: number;
+    description?: string;
+    validSlots: Slot[];
+  }) => Promise<void>;
+}) {
+  const [name, setName] = useState("");
+  const [category, setCategory] = useState<POICategory>("altro");
+  const [lat, setLat] = useState(defaultLat);
+  const [lon, setLon] = useState(defaultLon);
+  const [description, setDescription] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  return (
+    <Card className="p-4 space-y-3">
+      <div>
+        <Label>Nome</Label>
+        <Input value={name} onChange={(e) => setName(e.target.value)} />
+      </div>
+      <div>
+        <Label>Categoria</Label>
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value as POICategory)}
+          className="w-full rounded-2xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-lagoon"
+        >
+          {Object.entries(POI_CATEGORY_LABELS).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label>Lat</Label>
+          <Input
+            type="number"
+            step="any"
+            value={lat}
+            onChange={(e) => setLat(parseFloat(e.target.value))}
+          />
+        </div>
+        <div>
+          <Label>Lon</Label>
+          <Input
+            type="number"
+            step="any"
+            value={lon}
+            onChange={(e) => setLon(parseFloat(e.target.value))}
+          />
+        </div>
+      </div>
+      <div>
+        <Label>Descrizione (opzionale)</Label>
+        <Input value={description} onChange={(e) => setDescription(e.target.value)} />
+      </div>
+      <Button
+        type="button"
+        disabled={!name || saving}
+        onClick={async () => {
+          setSaving(true);
+          await onAdd({
+            name,
+            category,
+            lat,
+            lon,
+            description: description || undefined,
+            validSlots: POI_CATEGORY_DEFAULT_SLOTS[category],
+          });
+          setSaving(false);
+        }}
+        className="w-full py-2"
+      >
+        {saving ? "Salvataggio…" : "Aggiungi al catalogo"}
+      </Button>
+    </Card>
+  );
+}
