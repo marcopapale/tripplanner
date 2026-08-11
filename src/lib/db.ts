@@ -1,6 +1,6 @@
 import { promises as fs } from "fs";
 import path from "path";
-import { list, put } from "@vercel/blob";
+import { get, put } from "@vercel/blob";
 import { Trip, POI } from "./types";
 
 /**
@@ -41,11 +41,10 @@ async function writeLocalJSON<T>(file: string, data: T): Promise<void> {
 
 async function readBlobJSON<T>(pathname: string, fallback: T): Promise<T> {
   try {
-    const { blobs } = await list({ prefix: pathname, limit: 1 });
-    const blob = blobs.find((b) => b.pathname === pathname);
-    if (!blob) return fallback;
-    const res = await fetch(blob.url, { cache: "no-store" });
-    return (await res.json()) as T;
+    const result = await get(pathname, { access: "private", useCache: false });
+    if (!result?.stream) return fallback;
+    const text = await new Response(result.stream).text();
+    return JSON.parse(text) as T;
   } catch {
     return fallback;
   }
@@ -53,7 +52,7 @@ async function readBlobJSON<T>(pathname: string, fallback: T): Promise<T> {
 
 async function writeBlobJSON<T>(pathname: string, data: T): Promise<void> {
   await put(pathname, JSON.stringify(data, null, 2), {
-    access: "public",
+    access: "private",
     addRandomSuffix: false,
     allowOverwrite: true,
     contentType: "application/json",
