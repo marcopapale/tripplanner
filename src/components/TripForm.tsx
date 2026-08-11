@@ -60,8 +60,12 @@ export function TripForm() {
     try {
       const { tripId } = await createTrip({ destination, startDate, endDate, participants });
       router.push(`/viaggio-creato/${tripId}`);
-    } catch {
-      setError("Qualcosa è andato storto. Riprova.");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? `Errore: ${err.message}`
+          : "Qualcosa è andato storto. Riprova."
+      );
       setLoading(false);
     }
   }

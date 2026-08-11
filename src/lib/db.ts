@@ -13,6 +13,12 @@ import { Trip, POI } from "./types";
 
 const USE_BLOB = !!process.env.BLOB_READ_WRITE_TOKEN;
 
+if (!USE_BLOB && process.env.VERCEL) {
+  console.warn(
+    "[db] BLOB_READ_WRITE_TOKEN non impostato: sto usando il filesystem locale, che su Vercel in produzione è read-only. Collega uno Storage Blob al progetto e fai un redeploy."
+  );
+}
+
 const DATA_DIR = path.join(process.cwd(), "data");
 const TRIPS_FILE = path.join(DATA_DIR, "trips.json");
 const POIS_FILE = path.join(DATA_DIR, "pois.json");
