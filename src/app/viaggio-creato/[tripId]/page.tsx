@@ -25,7 +25,7 @@ export default async function TripCreatedPage({
           <span className="inline-block rounded-full bg-lagoon/10 text-lagoon-dark text-xs font-semibold px-3 py-1 mb-4">
             Viaggio creato 🎉
           </span>
-          <h1 className="text-2xl font-bold mb-1">{trip.destination}</h1>
+          <h1 className="text-2xl font-bold mb-1">{trip.title || trip.destination}</h1>
           <p className="text-gray-500">{formatDateRange(trip.startDate, trip.endDate)}</p>
         </div>
 
@@ -59,7 +59,7 @@ export default async function TripCreatedPage({
 
         <div className="text-center text-sm text-gray-500">
           <Link href="/admin" className="text-sunset-dark font-semibold hover:underline">
-            Vai al gestionale POI →
+            Vai al Gestionale Viaggi →
           </Link>
         </div>
       </div>

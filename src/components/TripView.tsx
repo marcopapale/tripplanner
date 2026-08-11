@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import { Trip, POI, SLOTS, SLOT_LABELS, Slot } from "@/lib/types";
+import { Trip, POI, SLOTS, SLOT_LABELS, Slot, DEFAULT_ACCENT_COLOR } from "@/lib/types";
 import {
   daysUntilStart,
   tripStatus,
@@ -47,12 +47,18 @@ export function TripView({ trip, pois }: { trip: Trip; pois: POI[] }) {
       .filter((m): m is { poi: POI; slots: Slot[] } => m !== null);
   }, [day, poiById]);
 
+  const accent = trip.accentColor || DEFAULT_ACCENT_COLOR;
+
   return (
-    <div className="flex-1 flex flex-col bg-white">
+    <div
+      className="flex-1 flex flex-col bg-white"
+      style={{ "--accent": accent } as React.CSSProperties}
+    >
       <header className="border-b border-gray-100 bg-white/95 backdrop-blur sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-lg font-bold">{trip.destination}</h1>
+            <h1 className="text-lg font-bold">{trip.title || trip.destination}</h1>
+            {trip.subtitle && <p className="text-sm text-gray-500">{trip.subtitle}</p>}
             <p className="text-xs text-gray-500">
               {formatDateRange(trip.startDate, trip.endDate)}
             </p>
@@ -60,7 +66,10 @@ export function TripView({ trip, pois }: { trip: Trip; pois: POI[] }) {
 
           <div className="flex items-center gap-3">
             {status === "upcoming" && (
-              <div className="rounded-full bg-sand px-4 py-1.5 text-xs font-semibold text-sunset-dark">
+              <div
+                className="rounded-full px-4 py-1.5 text-xs font-semibold"
+                style={{ background: `${accent}1a`, color: accent }}
+              >
                 {daysLeft === 0 ? "Si parte oggi! 🎉" : `Mancano ${daysLeft} giorni`}
               </div>
             )}
@@ -98,10 +107,9 @@ export function TripView({ trip, pois }: { trip: Trip; pois: POI[] }) {
               key={i}
               onClick={() => setSelectedDay(i)}
               className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                selectedDay === i
-                  ? "bg-sunset text-white"
-                  : "bg-gray-50 text-gray-600 hover:bg-gray-100"
+                selectedDay === i ? "text-white" : "bg-gray-50 text-gray-600 hover:bg-gray-100"
               }`}
+              style={selectedDay === i ? { background: accent } : undefined}
             >
               Giorno {i + 1}
               <span className="ml-1.5 opacity-70 text-xs">

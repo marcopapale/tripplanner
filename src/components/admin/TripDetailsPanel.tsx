@@ -1,0 +1,149 @@
+"use client";
+
+import { useState } from "react";
+import { Trip, Participant, DEFAULT_ACCENT_COLOR } from "@/lib/types";
+import { updateTripDetails, addParticipant } from "@/app/actions/trip-actions";
+import { Card, Input, Label } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { CopyLink } from "@/components/CopyLink";
+
+export function TripDetailsPanel({
+  trip,
+  origin,
+  onTripUpdated,
+}: {
+  trip: Trip;
+  origin: string;
+  onTripUpdated: (trip: Trip) => void;
+}) {
+  const [title, setTitle] = useState(trip.title ?? "");
+  const [subtitle, setSubtitle] = useState(trip.subtitle ?? "");
+  const [accentColor, setAccentColor] = useState(trip.accentColor ?? DEFAULT_ACCENT_COLOR);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const [showAddParticipant, setShowAddParticipant] = useState(false);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [addingParticipant, setAddingParticipant] = useState(false);
+
+  async function handleSave() {
+    setSaving(true);
+    await updateTripDetails(trip.id, { title, subtitle, accentColor });
+    onTripUpdated({ ...trip, title: title || undefined, subtitle: subtitle || undefined, accentColor });
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1500);
+  }
+
+  async function handleAddParticipant() {
+    if (!firstName || !lastName || !email) return;
+    setAddingParticipant(true);
+    const participant: Participant = await addParticipant(trip.id, { firstName, lastName, email });
+    onTripUpdated({ ...trip, participants: [...trip.participants, participant] });
+    setFirstName("");
+    setLastName("");
+    setEmail("");
+    setAddingParticipant(false);
+    setShowAddParticipant(false);
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="grid sm:grid-cols-2 gap-3">
+        <div>
+          <Label>Titolo del viaggio</Label>
+          <Input
+            placeholder={trip.destination}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label>Colore accento</Label>
+          <div className="flex items-center gap-2">
+            <input
+              type="color"
+              value={accentColor}
+              onChange={(e) => setAccentColor(e.target.value)}
+              className="h-[38px] w-12 rounded-lg border border-gray-200 cursor-pointer"
+            />
+            <Input
+              value={accentColor}
+              onChange={(e) => setAccentColor(e.target.value)}
+              className="flex-1"
+            />
+          </div>
+        </div>
+      </div>
+      <div>
+        <Label>Sottotitolo</Label>
+        <Input
+          placeholder="Una breve descrizione del viaggio"
+          value={subtitle}
+          onChange={(e) => setSubtitle(e.target.value)}
+        />
+      </div>
+      <Button onClick={handleSave} disabled={saving} className="py-2">
+        {saving ? "Salvataggio…" : saved ? "Salvato ✓" : "Salva dettagli"}
+      </Button>
+
+      <div className="pt-2 border-t border-gray-100">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-xs font-bold uppercase tracking-wide text-gray-400">
+            Partecipanti ({trip.participants.length})
+          </h3>
+          <button
+            onClick={() => setShowAddParticipant((v) => !v)}
+            className="text-xs font-semibold text-sunset-dark hover:underline"
+          >
+            {showAddParticipant ? "Chiudi" : "+ Aggiungi partecipante"}
+          </button>
+        </div>
+
+        {showAddParticipant && (
+          <Card className="p-3 mb-2 space-y-2">
+            <div className="grid grid-cols-3 gap-2">
+              <Input placeholder="Nome" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+              <Input placeholder="Cognome" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+              <Input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <Button
+              onClick={handleAddParticipant}
+              disabled={addingParticipant || !firstName || !lastName || !email}
+              className="w-full py-1.5 text-xs"
+            >
+              {addingParticipant ? "Aggiungo…" : "Crea link di accesso"}
+            </Button>
+          </Card>
+        )}
+
+        <ul className="space-y-2">
+          {trip.participants.map((p) => {
+            const url = `${origin}/trip/${p.token}`;
+            return (
+              <li
+                key={p.id}
+                className="flex items-center justify-between gap-3 rounded-xl bg-sand/60 px-3 py-2"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">
+                    {p.firstName} {p.lastName}
+                  </p>
+                  <p className="text-xs text-gray-400 truncate">{p.email}</p>
+                </div>
+                <CopyLink url={url} />
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </div>
+  );
+}

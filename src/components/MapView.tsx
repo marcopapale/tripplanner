@@ -34,7 +34,7 @@ export function MapView({
     <MapContainer
       center={[centerLat, centerLon]}
       zoom={13}
-      scrollWheelZoom
+      scrollWheelZoom={false}
       className="h-full w-full"
     >
       <Recenter lat={centerLat} lon={centerLon} />

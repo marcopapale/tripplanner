@@ -11,36 +11,59 @@ export const SLOT_LABELS: Record<Slot, string> = {
 };
 
 export type POICategory =
+  | "monumento"
+  | "chiesa"
+  | "museo"
   | "spiaggia"
-  | "ristorante"
-  | "cultura"
-  | "intrattenimento"
   | "natura"
+  | "ristorante"
+  | "aperitivo"
+  | "vita_notturna"
   | "shopping"
   | "altro";
 
 export const POI_CATEGORY_LABELS: Record<POICategory, string> = {
+  monumento: "Monumento",
+  chiesa: "Chiesa",
+  museo: "Museo",
   spiaggia: "Spiaggia",
-  ristorante: "Ristorante",
-  cultura: "Cultura",
-  intrattenimento: "Intrattenimento",
   natura: "Natura",
+  ristorante: "Ristorante",
+  aperitivo: "Aperitivo",
+  vita_notturna: "Vita notturna",
   shopping: "Shopping",
   altro: "Altro",
 };
 
 export const POI_CATEGORY_DEFAULT_SLOTS: Record<POICategory, Slot[]> = {
+  monumento: ["mattina", "pomeriggio"],
+  chiesa: ["mattina", "pomeriggio"],
+  museo: ["mattina", "pomeriggio"],
   spiaggia: ["mattina", "pomeriggio"],
-  ristorante: ["pranzo", "cena"],
-  cultura: ["mattina", "pomeriggio"],
-  intrattenimento: ["serata"],
   natura: ["mattina", "pomeriggio"],
+  ristorante: ["pranzo", "cena"],
+  aperitivo: ["pomeriggio", "serata"],
+  vita_notturna: ["serata"],
   shopping: ["pomeriggio"],
   altro: ["mattina", "pomeriggio", "serata"],
 };
 
+/** Categories offered as map-search filters (excludes "altro", which is manual-only). */
+export const OSM_SEARCH_CATEGORIES: POICategory[] = [
+  "monumento",
+  "chiesa",
+  "museo",
+  "spiaggia",
+  "natura",
+  "ristorante",
+  "aperitivo",
+  "vita_notturna",
+  "shopping",
+];
+
 export interface POI {
   id: string;
+  tripId: string;
   name: string;
   category: POICategory;
   lat: number;
@@ -59,9 +82,14 @@ export interface Participant {
 
 export type ItineraryDay = Record<Slot, string[]>; // slot -> poi ids
 
+export const DEFAULT_ACCENT_COLOR = "#ff6b4a";
+
 export interface Trip {
   id: string;
   destination: string;
+  title?: string;
+  subtitle?: string;
+  accentColor?: string;
   lat: number;
   lon: number;
   startDate: string; // ISO date (yyyy-MM-dd)
