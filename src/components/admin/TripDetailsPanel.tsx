@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Trip, Participant, DEFAULT_ACCENT_COLOR } from "@/lib/types";
-import { updateTripDetails, addParticipant } from "@/app/actions/trip-actions";
+import { updateTripDetails, addParticipant, deleteTrip } from "@/app/actions/trip-actions";
 import { Card, Input, Label } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { CopyLink } from "@/components/CopyLink";
@@ -11,10 +11,12 @@ export function TripDetailsPanel({
   trip,
   origin,
   onTripUpdated,
+  onTripDeleted,
 }: {
   trip: Trip;
   origin: string;
   onTripUpdated: (trip: Trip) => void;
+  onTripDeleted: (tripId: string) => void;
 }) {
   const [title, setTitle] = useState(trip.title ?? "");
   const [subtitle, setSubtitle] = useState(trip.subtitle ?? "");
@@ -27,6 +29,15 @@ export function TripDetailsPanel({
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [addingParticipant, setAddingParticipant] = useState(false);
+
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDelete() {
+    setDeleting(true);
+    await deleteTrip(trip.id);
+    onTripDeleted(trip.id);
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -143,6 +154,42 @@ export function TripDetailsPanel({
             );
           })}
         </ul>
+      </div>
+
+      <div className="pt-2 border-t border-gray-100">
+        {!confirmDelete ? (
+          <button
+            onClick={() => setConfirmDelete(true)}
+            className="text-xs font-semibold text-red-400 hover:text-red-600"
+          >
+            Elimina viaggio
+          </button>
+        ) : (
+          <div className="rounded-2xl bg-red-50 p-3 space-y-2">
+            <p className="text-xs text-red-700">
+              Eliminare definitivamente <strong>{trip.title || trip.destination}</strong>? Verranno
+              rimossi anche i link dei partecipanti e i POI di questo viaggio. Azione irreversibile.
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="danger"
+                onClick={handleDelete}
+                disabled={deleting}
+                className="text-xs py-1.5"
+              >
+                {deleting ? "Eliminazione…" : "Sì, elimina"}
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setConfirmDelete(false)}
+                disabled={deleting}
+                className="text-xs py-1.5"
+              >
+                Annulla
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

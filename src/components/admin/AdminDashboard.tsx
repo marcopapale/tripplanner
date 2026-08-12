@@ -119,6 +119,16 @@ export function AdminDashboard({
     setTrips((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
   }
 
+  function handleTripDeleted(tripId: string) {
+    setTrips((prev) => {
+      const next = prev.filter((t) => t.id !== tripId);
+      setSelectedTripId(next[0]?.id ?? null);
+      return next;
+    });
+    setPois((prev) => prev.filter((p) => p.tripId !== tripId));
+    setSelectedDay(0);
+  }
+
   async function handleDeletePOI(poiId: string) {
     setPois((prev) => prev.filter((p) => p.id !== poiId));
     setTrips((prev) =>
@@ -188,9 +198,11 @@ export function AdminDashboard({
                   </summary>
                   <div className="mt-3">
                     <TripDetailsPanel
+                      key={selectedTrip.id}
                       trip={selectedTrip}
                       origin={origin}
                       onTripUpdated={handleTripUpdated}
+                      onTripDeleted={handleTripDeleted}
                     />
                   </div>
                 </details>
@@ -220,6 +232,7 @@ export function AdminDashboard({
                       Cerca POI sulla mappa — assegnali a Giorno {selectedDay + 1}
                     </h2>
                     <POIMapSearch
+                      key={selectedTrip.id}
                       trip={selectedTrip}
                       catalogPOIs={tripPOIs}
                       selectedDay={selectedDay}

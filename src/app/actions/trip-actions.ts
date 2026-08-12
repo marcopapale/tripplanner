@@ -3,6 +3,7 @@
 import { nanoid } from "nanoid";
 import {
   getTrips,
+  saveTrips,
   upsertTrip,
   getTripByParticipantToken,
   getPOIs,
@@ -94,6 +95,16 @@ export async function refreshPOIDiscovery(tripId: string): Promise<number> {
     await savePOIs([...allPOIs, ...toPOIs(fresh, tripId)]);
   }
   return fresh.length;
+}
+
+export async function deleteTrip(tripId: string): Promise<void> {
+  const trips = await getTrips();
+  await saveTrips(trips.filter((t) => t.id !== tripId));
+
+  // POIs are scoped to a trip; drop the ones that belonged only to it.
+  const pois = await getPOIs();
+  const remaining = pois.filter((p) => p.tripId !== tripId);
+  if (remaining.length !== pois.length) await savePOIs(remaining);
 }
 
 export async function getTripForOrganizer(tripId: string): Promise<Trip | undefined> {
