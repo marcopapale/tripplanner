@@ -104,13 +104,17 @@ export function TripForm() {
         </div>
         <div>
           <Label>Numero partecipanti</Label>
-          <Input
-            type="number"
-            min={1}
-            max={30}
+          <select
             value={participants.length}
-            onChange={(e) => setCount(parseInt(e.target.value || "1", 10))}
-          />
+            onChange={(e) => setCount(parseInt(e.target.value, 10))}
+            className="w-full rounded-2xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-lagoon focus:ring-2 focus:ring-lagoon/20 transition bg-white"
+          >
+            {Array.from({ length: 30 }, (_, i) => i + 1).map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
         </div>
       </Card>
 
