@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createTrip } from "@/app/actions/trip-actions";
 import { Card, Input, Label } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { CreatingTripOverlay } from "@/components/CreatingTripOverlay";
 
 interface ParticipantRow {
   firstName: string;
@@ -72,6 +73,7 @@ export function TripForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {loading && <CreatingTripOverlay />}
       <Card className="p-6 space-y-4">
         <div>
           <Label>Destinazione</Label>

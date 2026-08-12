@@ -39,3 +39,16 @@ body {
 .leaflet-popup-content-wrapper {
   border-radius: 1rem;
 }
+
+@keyframes trip-bounce {
+  0%, 100% {
+    transform: translate(-3px, -2px) rotate(-8deg);
+  }
+  50% {
+    transform: translate(3px, 2px) rotate(8deg);
+  }
+}
+
+.animate-trip-bounce {
+  animation: trip-bounce 1.6s ease-in-out infinite;
+}
