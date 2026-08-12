@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { Trip, POI, SLOTS, SLOT_LABELS, Slot, DEFAULT_ACCENT_COLOR } from "@/lib/types";
+import { Trip, POI, SLOTS, SLOT_LABELS, Slot, DEFAULT_ACCENT_COLOR, Participant } from "@/lib/types";
 import {
   daysUntilStart,
   tripStatus,
@@ -84,18 +84,7 @@ export function TripView({ trip, pois }: { trip: Trip; pois: POI[] }) {
               </div>
             )}
 
-            <div className="flex -space-x-2">
-              {trip.participants.map((p) => (
-                <div
-                  key={p.id}
-                  title={`${p.firstName} ${p.lastName}`}
-                  className="h-8 w-8 rounded-full bg-lagoon text-white text-xs font-semibold flex items-center justify-center border-2 border-white"
-                >
-                  {p.firstName[0]}
-                  {p.lastName[0]}
-                </div>
-              ))}
-            </div>
+            <ParticipantsMenu participants={trip.participants} />
           </div>
         </div>
       </header>
@@ -159,6 +148,66 @@ export function TripView({ trip, pois }: { trip: Trip; pois: POI[] }) {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function ParticipantsMenu({ participants }: { participants: Participant[] }) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handlePointerDown(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [open]);
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex -space-x-2"
+        aria-label="Mostra partecipanti"
+      >
+        {participants.map((p) => (
+          <div
+            key={p.id}
+            className="h-8 w-8 rounded-full bg-lagoon text-white text-xs font-semibold flex items-center justify-center border-2 border-white"
+          >
+            {p.firstName[0]}
+            {p.lastName[0]}
+          </div>
+        ))}
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-2 z-50 w-56 rounded-2xl bg-white border border-gray-100 shadow-lg p-2">
+            <p className="text-xs font-bold uppercase tracking-wide text-gray-400 px-2 py-1">
+              Partecipanti ({participants.length})
+            </p>
+            <ul>
+              {participants.map((p) => (
+                <li
+                  key={p.id}
+                  className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-sand/60"
+                >
+                  <div className="h-7 w-7 shrink-0 rounded-full bg-lagoon text-white text-[11px] font-semibold flex items-center justify-center">
+                    {p.firstName[0]}
+                    {p.lastName[0]}
+                  </div>
+                  <span className="text-sm font-medium truncate">
+                    {p.firstName} {p.lastName}
+                  </span>
+                </li>
+              ))}
+            </ul>
+        </div>
+      )}
     </div>
   );
 }
