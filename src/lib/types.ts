@@ -87,13 +87,14 @@ export type ItineraryDay = Record<Slot, string[]>; // slot -> poi ids
 
 export const DEFAULT_ACCENT_COLOR = "#ff6b4a";
 
-export type TransportMode = "auto" | "scooter" | "trasporto_pubblico" | "bicicletta";
+export type TransportMode = "auto" | "scooter" | "trasporto_pubblico" | "bicicletta" | "a_piedi";
 
 export const TRANSPORT_MODE_LABELS: Record<TransportMode, string> = {
   auto: "Automobile",
   scooter: "Scooter",
   trasporto_pubblico: "Trasporto pubblico",
   bicicletta: "Bicicletta",
+  a_piedi: "A piedi",
 };
 
 /** Proposta AI non ancora approvata/scartata: candidati da rivedere prima che diventino POI veri. */
