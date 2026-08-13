@@ -38,7 +38,7 @@ function emptyDay(): ItineraryDay {
 
 export async function createTrip(
   input: CreateTripInput
-): Promise<{ tripId: string }> {
+): Promise<{ tripId: string; hasAIProposal: boolean }> {
   const { lat, lon } = await geocodeDestination(input.destination);
 
   const dayCount = tripDayCount(input.startDate, input.endDate);
@@ -69,13 +69,15 @@ export async function createTrip(
   // Genera subito una proposta AI di POI (mai automaticamente inseriti in
   // itinerario: l'admin la rivede e approva esplicitamente). Best-effort: la
   // creazione del viaggio non deve mai fallire per un problema col servizio AI.
+  let hasAIProposal = false;
   try {
-    await generateAIPOIProposal(trip.id);
+    const proposal = await generateAIPOIProposal(trip.id);
+    hasAIProposal = proposal.length > 0;
   } catch {
     // niente proposta pronta: l'admin potrà rigenerarla dal Gestionale.
   }
 
-  return { tripId: trip.id };
+  return { tripId: trip.id, hasAIProposal };
 }
 
 /** Approva (aggiunge al catalogo + assegna a giorno/slot) e/o scarta item della proposta AI pendente. */

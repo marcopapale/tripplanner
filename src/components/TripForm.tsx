@@ -61,14 +61,14 @@ export function TripForm() {
     }
     setLoading(true);
     try {
-      const { tripId } = await createTrip({
+      const { tripId, hasAIProposal } = await createTrip({
         destination,
         startDate,
         endDate,
         transportMode,
         participants,
       });
-      router.push(`/personalizza-viaggio/${tripId}`);
+      router.push(hasAIProposal ? `/personalizza-viaggio/${tripId}` : `/admin?trip=${tripId}`);
     } catch (err) {
       setError(
         err instanceof Error
