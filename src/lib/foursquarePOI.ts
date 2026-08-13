@@ -63,7 +63,7 @@ async function searchByQuery(
   try {
     const res = await fetch(url.toString(), {
       headers: {
-        Authorization: apiKey,
+        Authorization: `Bearer ${apiKey}`,
         Accept: "application/json",
       },
     });
@@ -100,9 +100,15 @@ export async function testFoursquareConnection(
   url.searchParams.set("fields", "name,geocodes,categories,location,rating,price");
 
   const res = await fetch(url.toString(), {
-    headers: { Authorization: apiKey, Accept: "application/json" },
+    headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" },
   });
-  const body = await res.json().catch(() => ({}));
+  const text = await res.text();
+  let body: unknown;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    body = { raw: text.slice(0, 300) };
+  }
   return { ok: res.ok, status: res.status, sample: body };
 }
 

@@ -21,6 +21,7 @@ export function SettingsPanel({ initialSettings }: { initialSettings: AppSetting
     ok: boolean;
     status: number;
     places: { name: string; rating?: number; price?: number }[];
+    errorMessage?: string;
   } | null>(null);
 
   async function handleSave() {
@@ -35,11 +36,16 @@ export function SettingsPanel({ initialSettings }: { initialSettings: AppSetting
     setTesting(true);
     setTestResult(null);
     const res = await testFoursquareKey(foursquareApiKey);
-    const sample = res.sample as { results?: { name: string; rating?: number; price?: number }[] };
+    const sample = res.sample as {
+      results?: { name: string; rating?: number; price?: number }[];
+      message?: string;
+      raw?: string;
+    };
     setTestResult({
       ok: res.ok,
       status: res.status,
       places: sample.results ?? [],
+      errorMessage: sample.message ?? sample.raw,
     });
     setTesting(false);
   }
@@ -112,8 +118,11 @@ export function SettingsPanel({ initialSettings }: { initialSettings: AppSetting
                   <p className="font-semibold">
                     {testResult.ok ? `HTTP ${testResult.status} ✓` : `Errore HTTP ${testResult.status}`}
                   </p>
+                  {!testResult.ok && testResult.errorMessage && (
+                    <p className="text-red-500">{testResult.errorMessage}</p>
+                  )}
                   {testResult.places.length === 0 ? (
-                    <p className="text-gray-500">Nessun risultato restituito.</p>
+                    testResult.ok && <p className="text-gray-500">Nessun risultato restituito.</p>
                   ) : (
                     <>
                       <ul className="space-y-0.5">
