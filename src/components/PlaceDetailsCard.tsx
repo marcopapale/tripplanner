@@ -12,7 +12,7 @@ export function PlaceDetailsCard({ placeId }: { placeId: string }) {
   return (
     <gmp-place-details-compact
       className="gmp-card-theme"
-      style={{ width: "300px", maxWidth: "100%" }}
+      style={{ width: "220px", maxWidth: "100%" }}
     >
       <gmp-place-details-place-request place={placeId} />
       <gmp-place-content-config>

@@ -62,10 +62,16 @@ export function GoogleMapView({
         });
         // clickableIcons:false disabilita i click su TUTTA la mappa vettoriale
         // (bug noto con mapId): blocchiamo solo il popup nativo delle icone POI.
+        // Click su un punto qualsiasi della mappa (non su un marker, che ferma
+        // la propagazione) chiude la card di dettaglio eventualmente aperta.
         mapRef.current.addListener("click", (e: google.maps.MapMouseEvent & { placeId?: string }) => {
-          if (e.placeId) {
-            e.stop();
-          }
+          if (e.placeId) e.stop();
+          setSelected(null);
+          setSelectedAnchor(null);
+        });
+        mapRef.current.addListener("dragstart", () => {
+          setSelected(null);
+          setSelectedAnchor(null);
         });
         setReady(true);
       })
@@ -112,7 +118,8 @@ export function GoogleMapView({
       });
       // gmp-click di Google è inaffidabile (la mappa cattura il puntatore per
       // il pan prima che si completi): usiamo il click nativo sul marker.
-      el.addEventListener("click", () => {
+      el.addEventListener("click", (ev) => {
+        ev.stopPropagation();
         anchorToMarker(el);
         setSelected(entry);
       });
@@ -139,7 +146,7 @@ export function GoogleMapView({
 
       {selected && (
         <div
-          className="absolute z-10 w-[min(320px,90%)] max-h-[80%] overflow-y-auto rounded-2xl bg-white shadow-lg border border-gray-100 p-3"
+          className="absolute z-10 w-[min(240px,85%)] max-h-[65%] overflow-y-auto rounded-2xl bg-white shadow-lg border border-gray-100 p-2.5 text-sm"
           style={
             selectedAnchor
               ? {
