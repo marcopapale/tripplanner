@@ -1,9 +1,7 @@
 import { notFound } from "next/navigation";
-import { headers } from "next/headers";
 import Link from "next/link";
 import { getTripForOrganizer } from "@/app/actions/trip-actions";
 import { Card } from "@/components/ui/Card";
-import { CopyLink } from "@/components/CopyLink";
 import { formatDateRange } from "@/lib/dates";
 
 export default async function TripCreatedPage({
@@ -14,9 +12,6 @@ export default async function TripCreatedPage({
   const { tripId } = await params;
   const trip = await getTripForOrganizer(tripId);
   if (!trip) notFound();
-
-  const h = await headers();
-  const origin = `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}`;
 
   return (
     <main className="flex-1 bg-gradient-to-b from-sky to-white">
@@ -29,39 +24,19 @@ export default async function TripCreatedPage({
           <p className="text-gray-500">{formatDateRange(trip.startDate, trip.endDate)}</p>
         </div>
 
-        <Card className="p-6">
-          <h2 className="font-semibold text-sm text-gray-700 mb-4">
-            Link di accesso per i partecipanti
-          </h2>
-          <p className="text-xs text-gray-500 mb-4">
-            Invia a ciascuno il proprio link personale: nessuna registrazione richiesta.
+        <Card className="p-6 text-center space-y-3">
+          <p className="text-sm text-gray-600">
+            Ora completa il programma del viaggio dal Gestionale: quando è pronto, potrai
+            condividere i link di accesso con i {trip.participants.length}{" "}
+            {trip.participants.length === 1 ? "partecipante" : "partecipanti"}.
           </p>
-          <ul className="space-y-3">
-            {trip.participants.map((p) => {
-              const url = `${origin}/trip/${p.token}`;
-              return (
-                <li
-                  key={p.id}
-                  className="flex items-center justify-between gap-3 rounded-2xl bg-sand/60 px-4 py-3"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {p.firstName} {p.lastName}
-                    </p>
-                    <p className="text-xs text-gray-400 truncate">{url}</p>
-                  </div>
-                  <CopyLink url={url} />
-                </li>
-              );
-            })}
-          </ul>
-        </Card>
-
-        <div className="text-center text-sm text-gray-500">
-          <Link href="/admin" className="text-sunset-dark font-semibold hover:underline">
+          <Link
+            href="/admin"
+            className="inline-block rounded-full bg-sunset text-white text-sm font-semibold px-6 py-2.5 hover:bg-sunset-dark transition-colors"
+          >
             Vai al Gestionale Viaggi →
           </Link>
-        </div>
+        </Card>
       </div>
     </main>
   );

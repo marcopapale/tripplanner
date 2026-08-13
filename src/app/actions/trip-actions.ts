@@ -150,6 +150,14 @@ export async function updateTripDetails(
   await upsertTrip(trip);
 }
 
+export async function markTripShared(tripId: string): Promise<void> {
+  const trips = await getTrips();
+  const trip = trips.find((t) => t.id === tripId);
+  if (!trip) throw new Error("Trip not found");
+  trip.shared = true;
+  await upsertTrip(trip);
+}
+
 export async function addParticipant(
   tripId: string,
   participant: { firstName: string; lastName: string; email: string }

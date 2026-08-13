@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Trip, Participant, DEFAULT_ACCENT_COLOR } from "@/lib/types";
-import { updateTripDetails, addParticipant, deleteTrip } from "@/app/actions/trip-actions";
+import { updateTripDetails, addParticipant, deleteTrip, markTripShared } from "@/app/actions/trip-actions";
 import { Card, Input, Label } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { CopyLink } from "@/components/CopyLink";
@@ -32,6 +32,14 @@ export function TripDetailsPanel({
 
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [sharing, setSharing] = useState(false);
+
+  async function handleShare() {
+    setSharing(true);
+    await markTripShared(trip.id);
+    onTripUpdated({ ...trip, shared: true });
+    setSharing(false);
+  }
 
   async function handleDelete() {
     setDeleting(true);
@@ -113,6 +121,22 @@ export function TripDetailsPanel({
           </button>
         </div>
 
+        {trip.shared ? (
+          <p className="text-xs text-lagoon-dark font-medium mb-2">
+            ✓ Condiviso — i partecipanti hanno accesso ai loro link
+          </p>
+        ) : (
+          <Card className="p-3 mb-3 space-y-2 bg-sand/40">
+            <p className="text-xs text-gray-500">
+              I link non sono ancora stati condivisi. Completa prima il programma del viaggio,
+              poi condividili con i partecipanti.
+            </p>
+            <Button onClick={handleShare} disabled={sharing} className="w-full py-2 text-sm">
+              {sharing ? "Condivisione…" : "📤 Condividi con partecipanti"}
+            </Button>
+          </Card>
+        )}
+
         {showAddParticipant && (
           <Card className="p-3 mb-2 space-y-2">
             <div className="grid grid-cols-3 gap-2">
@@ -149,7 +173,11 @@ export function TripDetailsPanel({
                   </p>
                   <p className="text-xs text-gray-400 truncate">{p.email}</p>
                 </div>
-                <CopyLink url={url} />
+                {trip.shared ? (
+                  <CopyLink url={url} />
+                ) : (
+                  <span className="text-xs text-gray-300">🔒 in attesa</span>
+                )}
               </li>
             );
           })}

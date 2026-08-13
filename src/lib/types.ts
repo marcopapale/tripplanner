@@ -97,4 +97,5 @@ export interface Trip {
   participants: Participant[];
   itinerary: ItineraryDay[]; // index = day number (0-based)
   createdAt: string;
+  shared?: boolean; // true once the admin has explicitly shared participant links
 }
