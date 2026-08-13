@@ -303,11 +303,11 @@ export function POIMapSearch({
       });
       marker.addEventListener("gmp-click", () => {
         console.log(`[map-debug] gmp-click catalog: ${poi.name}`);
+      });
+      el.addEventListener("click", () => {
+        console.log(`[map-debug] native click catalog: ${poi.name}`);
         setSelected({ kind: "catalog", poi });
       });
-      el.addEventListener("pointerdown", () =>
-        console.log(`[map-debug] pointerdown on catalog marker: ${poi.name}`)
-      );
       markerObjsRef.current.push(marker);
     }
 
@@ -326,11 +326,11 @@ export function POIMapSearch({
       });
       marker.addEventListener("gmp-click", () => {
         console.log(`[map-debug] gmp-click result: ${r.name}`);
+      });
+      el.addEventListener("click", () => {
+        console.log(`[map-debug] native click result: ${r.name}`);
         setSelected({ kind: "result", result: r });
       });
-      el.addEventListener("pointerdown", () =>
-        console.log(`[map-debug] pointerdown on result marker: ${r.name}`)
-      );
       markerObjsRef.current.push(marker);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
