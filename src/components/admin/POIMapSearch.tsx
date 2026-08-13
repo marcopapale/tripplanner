@@ -289,7 +289,7 @@ export function POIMapSearch({
         title: poi.name,
         content: el,
       });
-      marker.addListener("click", () => setSelected({ kind: "catalog", poi }));
+      marker.addEventListener("gmp-click", () => setSelected({ kind: "catalog", poi }));
       markerObjsRef.current.push(marker);
     }
 
@@ -306,7 +306,7 @@ export function POIMapSearch({
         title: r.name,
         content: el,
       });
-      marker.addListener("click", () => setSelected({ kind: "result", result: r }));
+      marker.addEventListener("gmp-click", () => setSelected({ kind: "result", result: r }));
       markerObjsRef.current.push(marker);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

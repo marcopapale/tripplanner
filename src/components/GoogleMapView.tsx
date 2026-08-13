@@ -81,7 +81,7 @@ export function GoogleMapView({
         position: { lat: entry.poi.lat, lng: entry.poi.lon },
         title: entry.poi.name,
       });
-      marker.addListener("click", () => setSelected(entry));
+      marker.addEventListener("gmp-click", () => setSelected(entry));
       markerObjsRef.current.push(marker);
       bounds.extend({ lat: entry.poi.lat, lng: entry.poi.lon });
     }
