@@ -12,7 +12,8 @@ export default function Home() {
             Organizza il prossimo viaggio di gruppo
           </h1>
           <p className="text-gray-500">
-            Destinazione, date e partecipanti: crea il viaggio e ottieni subito i link di accesso.
+            Destinazione, date e partecipanti: crea il viaggio, poi completa il programma e
+            condividilo quando è pronto.
           </p>
         </div>
         <TripForm />
