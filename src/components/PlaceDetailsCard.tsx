@@ -11,7 +11,6 @@
 export function PlaceDetailsCard({ placeId }: { placeId: string }) {
   return (
     <gmp-place-details-compact
-      orientation="vertical"
       className="gmp-card-theme"
       style={{ width: "300px", maxWidth: "100%" }}
     >
