@@ -33,6 +33,47 @@ interface SearchResult {
   placeId?: string;
 }
 
+// Mappa approssimativa Google Place "type" -> nostra categoria, usata solo
+// per colorare il marker/impostare gli slot di default: una stima ragionevole
+// basta, l'admin vede comunque il posto prima di confermare l'aggiunta.
+const TYPE_TO_CATEGORY: Partial<Record<string, POICategory>> = {
+  monument: "monumento",
+  historical_landmark: "monumento",
+  historical_place: "monumento",
+  tourist_attraction: "monumento",
+  church: "chiesa",
+  place_of_worship: "chiesa",
+  museum: "museo",
+  art_gallery: "museo",
+  beach: "spiaggia",
+  park: "natura",
+  national_park: "natura",
+  scenic_spot: "natura",
+  restaurant: "ristorante",
+  cafe: "ristorante",
+  bar: "aperitivo",
+  pub: "aperitivo",
+  night_club: "vita_notturna",
+  shopping_mall: "shopping",
+  store: "shopping",
+};
+
+function guessCategoryFromTypes(types: string[]): POICategory {
+  for (const t of types) {
+    const category = TYPE_TO_CATEGORY[t];
+    if (category) return category;
+  }
+  return "altro";
+}
+
+const PRICE_LEVEL_STRING_TO_NUMBER: Partial<Record<string, number>> = {
+  FREE: 0,
+  INEXPENSIVE: 1,
+  MODERATE: 2,
+  EXPENSIVE: 3,
+  VERY_EXPENSIVE: 4,
+};
+
 type Selected =
   | { kind: "catalog"; poi: POI }
   | { kind: "result"; result: SearchResult };
@@ -184,6 +225,7 @@ export function POIMapSearch({
   const mapRef = useRef<google.maps.Map | null>(null);
   const gRef = useRef<typeof google | null>(null);
   const markerObjsRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
+  const autocompleteContainerRef = useRef<HTMLDivElement>(null);
 
   // Ancora la card di dettaglio al pin cliccato invece che a un angolo fisso.
   function anchorToMarker(markerEl: HTMLElement) {
@@ -292,6 +334,52 @@ export function POIMapSearch({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [googleMapsBrowserKey, trip.id]);
 
+  // --- Ricerca di un posto specifico per nome, con autocomplete ---
+  useEffect(() => {
+    const g = gRef.current;
+    const map = mapRef.current;
+    const container = autocompleteContainerRef.current;
+    if (!mapReady || !g || !map || !container) return;
+
+    const el = new g.maps.places.PlaceAutocompleteElement({
+      locationBias: { center: { lat: trip.lat, lng: trip.lon }, radius: 20000 },
+    });
+    el.placeholder = "Cerca un posto specifico (es. nome di un ristorante)…";
+    (el.style as CSSStyleDeclaration).width = "100%";
+    container.appendChild(el);
+
+    el.addEventListener("gmp-select", async (event: google.maps.places.PlacePredictionSelectEvent) => {
+      const place = event.placePrediction.toPlace();
+      const { place: full } = await place.fetchFields({
+        fields: ["id", "displayName", "location", "rating", "priceLevel", "types"],
+      });
+      const lat = full.location?.lat();
+      const lon = full.location?.lng();
+      if (lat == null || lon == null) return;
+
+      const result: SearchResult = {
+        tempId: `autocomplete-${Date.now()}`,
+        name: full.displayName ?? "Luogo",
+        category: guessCategoryFromTypes(full.types ?? []),
+        lat,
+        lon,
+        rating: full.rating ?? undefined,
+        priceLevel: full.priceLevel ? PRICE_LEVEL_STRING_TO_NUMBER[full.priceLevel] : undefined,
+        placeId: full.id,
+      };
+      setSelectedAnchor(null);
+      setSelected({ kind: "result", result });
+      map.panTo({ lat, lng: lon });
+      map.setZoom(16);
+      el.value = "";
+    });
+
+    return () => {
+      container.removeChild(el);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapReady]);
+
   // --- Markers: catalog POIs + search results ---
   useEffect(() => {
     const g = gRef.current;
@@ -359,6 +447,13 @@ export function POIMapSearch({
           Cambia →
         </a>
       </div>
+
+      {googleMapsBrowserKey && (
+        <div
+          ref={autocompleteContainerRef}
+          className="[&>*]:w-full rounded-2xl border border-gray-200 overflow-hidden"
+        />
+      )}
 
       <div className="flex items-center gap-1.5 flex-wrap">
         {categoriesLoading && (

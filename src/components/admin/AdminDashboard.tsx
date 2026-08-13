@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
@@ -59,19 +59,9 @@ export function AdminDashboard({
   const [showAllDays, setShowAllDays] = useState(false);
   const [showAddPOI, setShowAddPOI] = useState(false);
   const [origin, setOrigin] = useState("");
-  const catalogDetailsRef = useRef<HTMLDetailsElement>(null);
 
   useEffect(() => {
     setOrigin(window.location.origin);
-  }, []);
-
-  // Arrivando da "Crea viaggio" con la proposta AI già pronta: apri subito
-  // l'accordion del catalogo così è visibile senza un click in più.
-  useEffect(() => {
-    if (initialSelectedTripId && catalogDetailsRef.current) {
-      catalogDetailsRef.current.open = true;
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const selectedTrip = trips.find((t) => t.id === selectedTripId) ?? null;
@@ -353,27 +343,34 @@ export function AdminDashboard({
                       );
                     })}
 
-                    <details
-                      ref={catalogDetailsRef}
-                      className="rounded-3xl bg-white border border-gray-100 p-4"
-                    >
-                      <summary className="text-xs font-bold uppercase tracking-wide text-gray-400 cursor-pointer">
-                        Catalogo di questo viaggio ({tripPOIs.length}) e strumenti avanzati
-                      </summary>
-                      <div className="mt-3 space-y-3">
+                    {(selectedTrip.aiPoiProposal?.length ?? 0) > 0 && (
+                      <Card className="p-4">
+                        <h3 className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-2">
+                          Proposta AI in sospeso
+                        </h3>
                         <AIPOIProposalReview
                           trip={selectedTrip}
                           onTripUpdated={handleAIProposalUpdated}
+                          showRegenerate={false}
                         />
+                      </Card>
+                    )}
 
+                    <Card className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-xs font-bold uppercase tracking-wide text-gray-400">
+                          Catalogo di questo viaggio ({tripPOIs.length})
+                        </h3>
                         <button
                           onClick={() => setShowAddPOI((v) => !v)}
-                          className="text-xs font-semibold text-sunset-dark hover:underline"
+                          className="text-xs font-semibold text-sunset-dark hover:underline shrink-0"
                         >
-                          {showAddPOI ? "Chiudi form manuale" : "+ Aggiungi POI manualmente"}
+                          {showAddPOI ? "Chiudi" : "+ Aggiungi manualmente"}
                         </button>
+                      </div>
 
-                        {showAddPOI && (
+                      {showAddPOI && (
+                        <div className="mb-3">
                           <AddPOIForm
                             defaultLat={selectedTrip.lat}
                             defaultLon={selectedTrip.lon}
@@ -383,36 +380,36 @@ export function AdminDashboard({
                               setShowAddPOI(false);
                             }}
                           />
-                        )}
-
-                        <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
-                          {tripPOIs.map((poi) => (
-                            <Card
-                              key={poi.id}
-                              className="p-3 flex items-center justify-between gap-2"
-                            >
-                              <div className="min-w-0">
-                                <p className="text-sm font-medium truncate">{poi.name}</p>
-                                <p className="text-xs text-gray-400 flex items-center gap-1.5">
-                                  {POI_CATEGORY_LABELS[poi.category]}
-                                  {poi.rating && <span>· ⭐ {poi.rating.toFixed(1)}</span>}
-                                  {poi.priceLevel && <span>{"$".repeat(poi.priceLevel)}</span>}
-                                </p>
-                              </div>
-                              <button
-                                onClick={() => handleDeletePOI(poi.id)}
-                                className="text-xs text-red-400 hover:text-red-600 shrink-0"
-                              >
-                                Rimuovi
-                              </button>
-                            </Card>
-                          ))}
-                          {tripPOIs.length === 0 && (
-                            <p className="text-sm text-gray-300">Nessun POI per questo viaggio.</p>
-                          )}
                         </div>
+                      )}
+
+                      <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
+                        {tripPOIs.map((poi) => (
+                          <Card
+                            key={poi.id}
+                            className="p-3 flex items-center justify-between gap-2 shadow-none border-gray-100"
+                          >
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium truncate">{poi.name}</p>
+                              <p className="text-xs text-gray-400 flex items-center gap-1.5">
+                                {POI_CATEGORY_LABELS[poi.category]}
+                                {poi.rating && <span>· ⭐ {poi.rating.toFixed(1)}</span>}
+                                {poi.priceLevel && <span>{"$".repeat(poi.priceLevel)}</span>}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => handleDeletePOI(poi.id)}
+                              className="text-xs text-red-400 hover:text-red-600 shrink-0"
+                            >
+                              Rimuovi
+                            </button>
+                          </Card>
+                        ))}
+                        {tripPOIs.length === 0 && (
+                          <p className="text-sm text-gray-300">Nessun POI per questo viaggio.</p>
+                        )}
                       </div>
-                    </details>
+                    </Card>
                   </div>
                 </div>
               </div>

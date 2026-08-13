@@ -27,9 +27,12 @@ interface GapPrompt {
 export function AIPOIProposalReview({
   trip,
   onTripUpdated,
+  showRegenerate = true,
 }: {
   trip: Trip;
   onTripUpdated: (trip: Trip) => void;
+  /** Nel Gestionale la rigenerazione è disabilitata: è uno step riservato a "Personalizza il tuo viaggio". */
+  showRegenerate?: boolean;
 }) {
   const items = trip.aiPoiProposal ?? [];
   const [selected, setSelected] = useState<Set<string>>(new Set(items.map((i) => i.id)));
@@ -79,7 +82,7 @@ export function AIPOIProposalReview({
   async function handleApproveSelected() {
     const approveItems = items.filter((i) => selected.has(i.id));
     const dismissItems = items.filter((i) => !selected.has(i.id));
-    const gaps = computeGaps(approveItems, dismissItems);
+    const gaps = showRegenerate ? computeGaps(approveItems, dismissItems) : [];
     if (gaps.length === 0) {
       await doResolve(
         approveItems.map((i) => i.id),
@@ -196,7 +199,9 @@ export function AIPOIProposalReview({
       {generating && <CreatingTripOverlay />}
       {items.length === 0 ? (
         <p className="text-sm text-gray-400">
-          Nessuna proposta AI disponibile al momento. Puoi generarne una nuova qui sotto.
+          {showRegenerate
+            ? "Nessuna proposta AI disponibile al momento. Puoi generarne una nuova qui sotto."
+            : "Nessuna proposta AI in sospeso."}
         </p>
       ) : (
         <>
@@ -266,6 +271,7 @@ export function AIPOIProposalReview({
         </>
       )}
 
+      {showRegenerate && (
       <div className="pt-1">
         {showNotes ? (
           <div className="space-y-2">
@@ -301,6 +307,7 @@ export function AIPOIProposalReview({
           </button>
         )}
       </div>
+      )}
     </div>
   );
 }
