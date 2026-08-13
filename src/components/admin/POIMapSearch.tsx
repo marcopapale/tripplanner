@@ -170,6 +170,9 @@ export function POIMapSearch({
   const [searching, setSearching] = useState(false);
   const [searchMsg, setSearchMsg] = useState<string | null>(null);
   const [selected, setSelected] = useState<Selected | null>(null);
+  const [selectedAnchor, setSelectedAnchor] = useState<{ x: number; y: number; below: boolean } | null>(
+    null
+  );
   const [mapReady, setMapReady] = useState(false);
   const [mapError, setMapError] = useState(false);
 
@@ -177,6 +180,17 @@ export function POIMapSearch({
   const mapRef = useRef<google.maps.Map | null>(null);
   const gRef = useRef<typeof google | null>(null);
   const markerObjsRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
+
+  // Ancora la card di dettaglio al pin cliccato invece che a un angolo fisso.
+  function anchorToMarker(markerEl: HTMLElement) {
+    const c = containerRef.current?.getBoundingClientRect();
+    const m = markerEl.getBoundingClientRect();
+    if (!c) return;
+    const half = 160;
+    const x = Math.min(Math.max(m.left + m.width / 2 - c.left, half + 8), Math.max(c.width - half - 8, half + 8));
+    const y = m.top - c.top;
+    setSelectedAnchor({ x, y, below: y < c.height / 2 });
+  }
 
   // AI curates which category filters are relevant for this destination the
   // first time the trip's map is opened (cached on the trip afterward).
@@ -280,11 +294,6 @@ export function POIMapSearch({
     const map = mapRef.current;
     if (!mapReady || !g || !map) return;
 
-    // DIAGNOSTICA TEMPORANEA — rimuovere dopo aver isolato il bug dei click.
-    console.log(
-      `[map-debug] rebuild marker effect: catalog=${catalogPOIs.length} results=${visibleResults.length}`
-    );
-
     markerObjsRef.current.forEach((m) => (m.map = null));
     markerObjsRef.current = [];
 
@@ -301,11 +310,8 @@ export function POIMapSearch({
         title: poi.name,
         content: el,
       });
-      marker.addEventListener("gmp-click", () => {
-        console.log(`[map-debug] gmp-click catalog: ${poi.name}`);
-      });
       el.addEventListener("click", () => {
-        console.log(`[map-debug] native click catalog: ${poi.name}`);
+        anchorToMarker(el);
         setSelected({ kind: "catalog", poi });
       });
       markerObjsRef.current.push(marker);
@@ -324,11 +330,8 @@ export function POIMapSearch({
         title: r.name,
         content: el,
       });
-      marker.addEventListener("gmp-click", () => {
-        console.log(`[map-debug] gmp-click result: ${r.name}`);
-      });
       el.addEventListener("click", () => {
-        console.log(`[map-debug] native click result: ${r.name}`);
+        anchorToMarker(el);
         setSelected({ kind: "result", result: r });
       });
       markerObjsRef.current.push(marker);
@@ -408,9 +411,23 @@ export function POIMapSearch({
               </div>
             )}
             {selected && (
-              <div className="absolute left-2 bottom-2 z-10 w-[min(320px,90%)] max-h-[85%] overflow-y-auto rounded-2xl bg-white shadow-lg border border-gray-100 p-3">
+              <div
+                className="absolute z-10 w-[min(320px,90%)] max-h-[85%] overflow-y-auto rounded-2xl bg-white shadow-lg border border-gray-100 p-3"
+                style={
+                  selectedAnchor
+                    ? {
+                        left: selectedAnchor.x,
+                        top: selectedAnchor.below ? selectedAnchor.y + 16 : selectedAnchor.y - 16,
+                        transform: selectedAnchor.below ? "translateX(-50%)" : "translate(-50%, -100%)",
+                      }
+                    : { left: 12, bottom: 12 }
+                }
+              >
                 <button
-                  onClick={() => setSelected(null)}
+                  onClick={() => {
+                    setSelected(null);
+                    setSelectedAnchor(null);
+                  }}
                   className="float-right text-gray-400 hover:text-gray-600 text-sm"
                 >
                   ✕

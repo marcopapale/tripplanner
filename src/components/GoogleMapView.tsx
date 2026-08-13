@@ -30,6 +30,20 @@ export function GoogleMapView({
   const [ready, setReady] = useState(false);
   const [error, setError] = useState(false);
   const [selected, setSelected] = useState<MapMarker | null>(null);
+  const [selectedAnchor, setSelectedAnchor] = useState<{ x: number; y: number; below: boolean } | null>(
+    null
+  );
+
+  // Ancora la card di dettaglio al pin cliccato invece che a un angolo fisso.
+  function anchorToMarker(markerEl: HTMLElement) {
+    const c = containerRef.current?.getBoundingClientRect();
+    const m = markerEl.getBoundingClientRect();
+    if (!c) return;
+    const half = 160;
+    const x = Math.min(Math.max(m.left + m.width / 2 - c.left, half + 8), Math.max(c.width - half - 8, half + 8));
+    const y = m.top - c.top;
+    setSelectedAnchor({ x, y, below: y < c.height / 2 });
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -83,12 +97,19 @@ export function GoogleMapView({
 
     const bounds = new g.maps.LatLngBounds();
     for (const entry of markers) {
+      const pin = new g.maps.marker.PinElement({});
       const marker = new g.maps.marker.AdvancedMarkerElement({
         map,
         position: { lat: entry.poi.lat, lng: entry.poi.lon },
         title: entry.poi.name,
+        content: pin.element,
       });
-      marker.addEventListener("gmp-click", () => setSelected(entry));
+      // gmp-click di Google è inaffidabile (la mappa cattura il puntatore per
+      // il pan prima che si completi): usiamo il click nativo sul pin.
+      pin.element.addEventListener("click", () => {
+        anchorToMarker(pin.element);
+        setSelected(entry);
+      });
       markerObjsRef.current.push(marker);
       bounds.extend({ lat: entry.poi.lat, lng: entry.poi.lon });
     }
@@ -111,9 +132,23 @@ export function GoogleMapView({
       )}
 
       {selected && (
-        <div className="absolute left-2 bottom-2 z-10 w-[min(320px,90%)] max-h-[80%] overflow-y-auto rounded-2xl bg-white shadow-lg border border-gray-100 p-3">
+        <div
+          className="absolute z-10 w-[min(320px,90%)] max-h-[80%] overflow-y-auto rounded-2xl bg-white shadow-lg border border-gray-100 p-3"
+          style={
+            selectedAnchor
+              ? {
+                  left: selectedAnchor.x,
+                  top: selectedAnchor.below ? selectedAnchor.y + 16 : selectedAnchor.y - 16,
+                  transform: selectedAnchor.below ? "translateX(-50%)" : "translate(-50%, -100%)",
+                }
+              : { left: 12, bottom: 12 }
+          }
+        >
           <button
-            onClick={() => setSelected(null)}
+            onClick={() => {
+              setSelected(null);
+              setSelectedAnchor(null);
+            }}
             className="float-right text-gray-400 hover:text-gray-600 text-sm"
           >
             ✕
