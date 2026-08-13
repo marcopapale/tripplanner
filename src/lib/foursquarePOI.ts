@@ -2,14 +2,20 @@ import { POICategory, POI_CATEGORY_DEFAULT_SLOTS } from "./types";
 import { MapBounds, DiscoveredPOI } from "./poiDiscovery";
 
 /**
- * Foursquare Places API (v3) backed POI search. Unlike OpenStreetMap, it can
+ * Foursquare Places API backed POI search. Unlike OpenStreetMap, it can
  * surface a rating (0-10) and a price tier (1-4) for venues, which is the
  * whole reason to offer it as an alternative provider — OSM simply has no
  * such data. Search is keyword-based (not category-ID based) to stay robust
  * without depending on Foursquare's internal category-ID taxonomy.
+ *
+ * Foursquare migrated off the old api.foursquare.com/v3 endpoints (which
+ * now return HTTP 410 Gone) to a new base URL with Bearer auth and a
+ * mandatory date-versioned header. See:
+ * https://docs.foursquare.com/fsq-developers-places/reference/migration-guide
  */
 
-const FSQ_SEARCH_URL = "https://api.foursquare.com/v3/places/search";
+const FSQ_SEARCH_URL = "https://places-api.foursquare.com/places/search";
+const FSQ_API_VERSION = "2025-06-17";
 
 const CATEGORY_QUERY: Partial<Record<POICategory, string>> = {
   monumento: "monument landmark",
@@ -25,11 +31,19 @@ const CATEGORY_QUERY: Partial<Record<POICategory, string>> = {
 
 interface FsqPlace {
   name?: string;
-  categories?: { name: string }[];
-  geocodes?: { main?: { latitude: number; longitude: number } };
+  latitude?: number;
+  longitude?: number;
   location?: { formatted_address?: string };
   rating?: number;
   price?: number;
+}
+
+function fsqHeaders(apiKey: string): HeadersInit {
+  return {
+    Authorization: `Bearer ${apiKey}`,
+    Accept: "application/json",
+    "X-Places-Api-Version": FSQ_API_VERSION,
+  };
 }
 
 function boundsToCenterRadius(bounds: MapBounds): { lat: number; lon: number; radius: number } {
@@ -58,26 +72,21 @@ async function searchByQuery(
   url.searchParams.set("radius", String(Math.round(radius)));
   url.searchParams.set("query", query);
   url.searchParams.set("limit", "30");
-  url.searchParams.set("fields", "name,geocodes,categories,location,rating,price");
+  url.searchParams.set("fields", "name,latitude,longitude,location,rating,price");
 
   try {
-    const res = await fetch(url.toString(), {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        Accept: "application/json",
-      },
-    });
+    const res = await fetch(url.toString(), { headers: fsqHeaders(apiKey) });
     if (!res.ok) return [];
     const data = await res.json();
     const places: FsqPlace[] = Array.isArray(data.results) ? data.results : [];
 
     return places
-      .filter((p) => p.name && p.geocodes?.main)
+      .filter((p) => p.name && p.latitude != null && p.longitude != null)
       .map((p) => ({
         name: p.name!,
         category,
-        lat: p.geocodes!.main!.latitude,
-        lon: p.geocodes!.main!.longitude,
+        lat: p.latitude!,
+        lon: p.longitude!,
         description: p.location?.formatted_address,
         validSlots: POI_CATEGORY_DEFAULT_SLOTS[category],
         rating: p.rating,
@@ -97,11 +106,9 @@ export async function testFoursquareConnection(
   url.searchParams.set("radius", "3000");
   url.searchParams.set("query", "restaurant");
   url.searchParams.set("limit", "3");
-  url.searchParams.set("fields", "name,geocodes,categories,location,rating,price");
+  url.searchParams.set("fields", "name,latitude,longitude,location,rating,price");
 
-  const res = await fetch(url.toString(), {
-    headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" },
-  });
+  const res = await fetch(url.toString(), { headers: fsqHeaders(apiKey) });
   const text = await res.text();
   let body: unknown;
   try {
