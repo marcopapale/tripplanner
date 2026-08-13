@@ -4,16 +4,55 @@ import { nanoid } from "nanoid";
 import { getTrips, getSettings, upsertTrip } from "@/lib/db";
 import { geocodePlace } from "@/lib/geocode";
 import { findPlaceByText } from "@/lib/googlePlacesPOI";
-import { tripDayCount } from "@/lib/dates";
+import { haversineDistanceMeters } from "@/lib/mapMath";
+import { tripDayCount, formatDayLabel } from "@/lib/dates";
 import {
   POICategory,
   OSM_SEARCH_CATEGORIES,
   AIPOIProposalItem,
   Slot,
   SLOTS,
+  SLOT_LABELS,
   TRANSPORT_MODE_LABELS,
   DEFAULT_AI_POI_PROMPT_TEMPLATE,
+  Trip,
+  AppSettings,
 } from "@/lib/types";
+
+// Oltre questa distanza dal punto geocodificato della destinazione, un
+// risultato è quasi certamente un match sbagliato del geocoder/Places (nome
+// omonimo altrove) piuttosto che un vero POI del viaggio — va scartato.
+const MAX_POI_DISTANCE_METERS = 150_000;
+
+interface ResolvedPlace {
+  lat: number;
+  lon: number;
+  placeId?: string;
+  rating?: number;
+  priceLevel?: number;
+}
+
+async function resolvePlace(
+  name: string,
+  trip: Trip,
+  settings: AppSettings
+): Promise<ResolvedPlace | null> {
+  let place: ResolvedPlace | null = null;
+  if (settings.poiProvider === "google" && settings.googleApiKey) {
+    const found = await findPlaceByText(`${name}, ${trip.destination}`, settings.googleApiKey);
+    if (found) place = found;
+  }
+  if (!place) {
+    const geocoded = await geocodePlace(`${name}, ${trip.destination}`);
+    if (geocoded) place = geocoded;
+  }
+  if (!place) return null;
+
+  const distance = haversineDistanceMeters(trip.lat, trip.lon, place.lat, place.lon);
+  if (distance > MAX_POI_DISTANCE_METERS) return null;
+
+  return place;
+}
 
 const ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
 
@@ -126,16 +165,7 @@ export async function generateAIPOIProposal(
       const slot = SLOTS.includes(item.slot as Slot) ? (item.slot as Slot) : "pomeriggio";
       const dayIndex = Math.min(Math.max(Math.round(item.dayIndex) - 1, 0), trip.itinerary.length - 1);
 
-      let place: { lat: number; lon: number; placeId?: string; rating?: number; priceLevel?: number } | null =
-        null;
-      if (settings.poiProvider === "google" && settings.googleApiKey) {
-        const found = await findPlaceByText(`${item.name}, ${trip.destination}`, settings.googleApiKey);
-        if (found) place = found;
-      }
-      if (!place) {
-        const geocoded = await geocodePlace(`${item.name}, ${trip.destination}`);
-        if (geocoded) place = geocoded;
-      }
+      const place = await resolvePlace(item.name, trip, settings);
       if (!place) return null;
 
       const proposal: AIPOIProposalItem = {
@@ -159,6 +189,106 @@ export async function generateAIPOIProposal(
   trip.aiPoiProposal = proposal;
   await upsertTrip(trip);
   return proposal;
+}
+
+/**
+ * Generates one alternative suggestion for each given (day, slot) gap — used
+ * when the admin approves a proposal but leaves some slots without an
+ * approved suggestion and asks for more ideas just for those. Appends to any
+ * existing pending proposal rather than replacing it.
+ */
+export async function generateAIPOIProposalForSlots(
+  tripId: string,
+  gaps: { dayIndex: number; slot: Slot }[],
+  extraNotes?: string
+): Promise<AIPOIProposalItem[]> {
+  const trips = await getTrips();
+  const trip = trips.find((t) => t.id === tripId);
+  if (!trip) throw new Error("Viaggio non trovato");
+  if (gaps.length === 0) return trip.aiPoiProposal ?? [];
+
+  const settings = await getSettings();
+  if (!settings.anthropicApiKey) {
+    throw new Error("Configura la chiave Anthropic in Impostazioni per generare la proposta AI.");
+  }
+
+  const transportLabel = TRANSPORT_MODE_LABELS[trip.transportMode] ?? "non specificato";
+  const dayCount = tripDayCount(trip.startDate, trip.endDate);
+  const gapsDescription = gaps
+    .map(
+      (g) => `Giorno ${g.dayIndex + 1} (${formatDayLabel(trip.startDate, g.dayIndex)}) — ${SLOT_LABELS[g.slot]}`
+    )
+    .join("; ");
+
+  let prompt = `Sei un travel agent esperto, conosci ${trip.destination} in ogni minimo particolare. Il viaggio dura ${dayCount} giorni, ci si sposta con: ${transportLabel}. L'admin non ha approvato le proposte precedenti per questi momenti dell'itinerario: ${gapsDescription}. Suggerisci esattamente un'alternativa valida per ciascuno di questi momenti, nello stesso ordine in cui sono elencati, cercabile su Google Maps.`;
+  if (extraNotes?.trim()) {
+    prompt += `\n\nSpecifiche aggiuntive di cui tenere conto: ${extraNotes.trim()}`;
+  }
+
+  interface RawAltItem {
+    name: string;
+    category: string;
+    description: string;
+  }
+
+  const { items: raw } = await callClaudeTool<{ items: RawAltItem[] }>(
+    settings.anthropicApiKey,
+    prompt,
+    "propose_alternatives",
+    "Restituisce un'alternativa per ciascuno dei momenti richiesti, nello stesso ordine.",
+    {
+      type: "object",
+      properties: {
+        items: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              name: { type: "string", description: "Nome proprio reale del luogo, cercabile su Google Maps" },
+              category: { type: "string", enum: OSM_SEARCH_CATEGORIES },
+              description: { type: "string", description: "Massimo una frase, perché è consigliato" },
+            },
+            required: ["name", "category", "description"],
+          },
+        },
+      },
+      required: ["items"],
+    }
+  );
+
+  const pairs = gaps
+    .map((gap, i) => ({ gap, item: (raw ?? [])[i] }))
+    .filter((p): p is { gap: { dayIndex: number; slot: Slot }; item: RawAltItem } => Boolean(p.item));
+
+  const resolved = await Promise.all(
+    pairs.map(async ({ gap, item }) => {
+      const category = OSM_SEARCH_CATEGORIES.includes(item.category as POICategory)
+        ? (item.category as POICategory)
+        : "altro";
+      const place = await resolvePlace(item.name, trip, settings);
+      if (!place) return null;
+
+      const proposal: AIPOIProposalItem = {
+        id: nanoid(10),
+        name: item.name,
+        category,
+        description: item.description,
+        dayIndex: gap.dayIndex,
+        slot: gap.slot,
+        lat: place.lat,
+        lon: place.lon,
+        placeId: place.placeId,
+        rating: place.rating,
+        priceLevel: place.priceLevel,
+      };
+      return proposal;
+    })
+  );
+
+  const newItems = resolved.filter((p): p is AIPOIProposalItem => p !== null);
+  trip.aiPoiProposal = [...(trip.aiPoiProposal ?? []), ...newItems];
+  await upsertTrip(trip);
+  return trip.aiPoiProposal;
 }
 
 /**

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
@@ -40,23 +40,38 @@ export function AdminDashboard({
   initialPOIs,
   poiProvider,
   googleMapsBrowserKey,
+  initialSelectedTripId,
 }: {
   initialTrips: Trip[];
   initialPOIs: POI[];
   poiProvider: POIProvider;
   googleMapsBrowserKey?: string;
+  initialSelectedTripId?: string;
 }) {
   const [trips, setTrips] = useState(initialTrips);
   const [pois, setPois] = useState(initialPOIs);
   const [selectedTripId, setSelectedTripId] = useState<string | null>(
-    initialTrips[0]?.id ?? null
+    (initialSelectedTripId && initialTrips.some((t) => t.id === initialSelectedTripId)
+      ? initialSelectedTripId
+      : initialTrips[0]?.id) ?? null
   );
   const [selectedDay, setSelectedDay] = useState(0);
+  const [showAllDays, setShowAllDays] = useState(false);
   const [showAddPOI, setShowAddPOI] = useState(false);
   const [origin, setOrigin] = useState("");
+  const catalogDetailsRef = useRef<HTMLDetailsElement>(null);
 
   useEffect(() => {
     setOrigin(window.location.origin);
+  }, []);
+
+  // Arrivando da "Crea viaggio" con la proposta AI già pronta: apri subito
+  // l'accordion del catalogo così è visibile senza un click in più.
+  useEffect(() => {
+    if (initialSelectedTripId && catalogDetailsRef.current) {
+      catalogDetailsRef.current.open = true;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const selectedTrip = trips.find((t) => t.id === selectedTripId) ?? null;
@@ -138,6 +153,7 @@ export function AdminDashboard({
     });
     setPois((prev) => prev.filter((p) => p.tripId !== tripId));
     setSelectedDay(0);
+    setShowAllDays(false);
   }
 
   async function handleDeletePOI(poiId: string) {
@@ -160,6 +176,16 @@ export function AdminDashboard({
     [pois, selectedTrip]
   );
   const poiById = useMemo(() => new Map(tripPOIs.map((p) => [p.id, p])), [tripPOIs]);
+
+  // Sulla mappa mostriamo solo i POI già assegnati al giorno selezionato,
+  // a meno che l'admin non chieda esplicitamente di vederli tutti.
+  const mapPOIs = useMemo(() => {
+    if (showAllDays) return tripPOIs;
+    const dayItinerary = selectedTrip?.itinerary[selectedDay];
+    if (!dayItinerary) return [];
+    const assignedIds = new Set(SLOTS.flatMap((s) => dayItinerary[s]));
+    return tripPOIs.filter((p) => assignedIds.has(p.id));
+  }, [tripPOIs, selectedTrip, selectedDay, showAllDays]);
 
   return (
     <main className="flex-1 bg-gradient-to-b from-sky to-white">
@@ -191,6 +217,7 @@ export function AdminDashboard({
                   onClick={() => {
                     setSelectedTripId(t.id);
                     setSelectedDay(0);
+                    setShowAllDays(false);
                   }}
                   className={`shrink-0 rounded-2xl px-4 py-2 text-left text-sm transition-colors ${
                     selectedTripId === t.id
@@ -224,12 +251,25 @@ export function AdminDashboard({
                 </details>
 
                 <div className="flex gap-2 overflow-x-auto pb-1">
+                  <button
+                    onClick={() => setShowAllDays(true)}
+                    className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                      showAllDays
+                        ? "bg-lagoon text-white"
+                        : "bg-white border border-gray-200 hover:bg-gray-50"
+                    }`}
+                  >
+                    Mostra tutto
+                  </button>
                   {selectedTrip.itinerary.map((_, i) => (
                     <button
                       key={i}
-                      onClick={() => setSelectedDay(i)}
+                      onClick={() => {
+                        setSelectedDay(i);
+                        setShowAllDays(false);
+                      }}
                       className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                        selectedDay === i
+                        !showAllDays && selectedDay === i
                           ? "bg-lagoon text-white"
                           : "bg-white border border-gray-200 hover:bg-gray-50"
                       }`}
@@ -247,10 +287,17 @@ export function AdminDashboard({
                     <h2 className="text-sm font-bold text-gray-700">
                       Cerca POI sulla mappa — assegnali a Giorno {selectedDay + 1}
                     </h2>
+                    {!showAllDays && (
+                      <p className="text-xs text-gray-400">
+                        Mostrati solo i POI già assegnati a questo giorno — usa &quot;Mostra
+                        tutto&quot; per vederli tutti.
+                      </p>
+                    )}
                     <POIMapSearch
                       key={selectedTrip.id}
                       trip={selectedTrip}
                       catalogPOIs={tripPOIs}
+                      mapPOIs={mapPOIs}
                       selectedDay={selectedDay}
                       poiProvider={poiProvider}
                       googleMapsBrowserKey={googleMapsBrowserKey}
@@ -306,7 +353,10 @@ export function AdminDashboard({
                       );
                     })}
 
-                    <details className="rounded-3xl bg-white border border-gray-100 p-4">
+                    <details
+                      ref={catalogDetailsRef}
+                      className="rounded-3xl bg-white border border-gray-100 p-4"
+                    >
                       <summary className="text-xs font-bold uppercase tracking-wide text-gray-400 cursor-pointer">
                         Catalogo di questo viaggio ({tripPOIs.length}) e strumenti avanzati
                       </summary>

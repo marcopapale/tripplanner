@@ -145,6 +145,7 @@ function AssignForm({
 export function POIMapSearch({
   trip,
   catalogPOIs,
+  mapPOIs,
   selectedDay,
   poiProvider,
   googleMapsBrowserKey,
@@ -152,7 +153,10 @@ export function POIMapSearch({
   onAddAndAssign,
 }: {
   trip: Trip;
+  /** Intero catalogo del viaggio — usato solo per non ripescare come "nuovi" risultati già presenti altrove. */
   catalogPOIs: POI[];
+  /** Sottoinsieme effettivamente disegnato come marker pieni sulla mappa. */
+  mapPOIs: POI[];
   selectedDay: number;
   poiProvider: POIProvider;
   googleMapsBrowserKey?: string;
@@ -297,7 +301,7 @@ export function POIMapSearch({
     markerObjsRef.current.forEach((m) => (m.map = null));
     markerObjsRef.current = [];
 
-    for (const poi of catalogPOIs) {
+    for (const poi of mapPOIs) {
       const el = document.createElement("div");
       el.style.cssText =
         `width:28px;height:28px;border-radius:9999px;display:flex;align-items:center;` +
@@ -337,7 +341,7 @@ export function POIMapSearch({
       markerObjsRef.current.push(marker);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapReady, catalogPOIs, visibleResults]);
+  }, [mapReady, mapPOIs, visibleResults]);
 
   const providerColor = poiProvider === "google" ? "#4285F4" : "#0d9488";
 

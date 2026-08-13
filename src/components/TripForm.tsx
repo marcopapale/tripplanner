@@ -68,7 +68,7 @@ export function TripForm() {
         transportMode,
         participants,
       });
-      router.push(`/viaggio-creato/${tripId}`);
+      router.push(`/admin?trip=${tripId}`);
     } catch (err) {
       setError(
         err instanceof Error

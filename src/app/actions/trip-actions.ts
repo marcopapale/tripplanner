@@ -11,7 +11,7 @@ import {
 } from "@/lib/db";
 import { generateToken } from "@/lib/token";
 import { geocodeDestination } from "@/lib/geocode";
-import { generateAIPOIProposal } from "@/app/actions/ai-actions";
+import { generateAIPOIProposal, generateAIPOIProposalForSlots } from "@/app/actions/ai-actions";
 import { findOrCreatePOI } from "@/app/actions/poi-actions";
 import { tripDayCount } from "@/lib/dates";
 import {
@@ -116,6 +116,19 @@ export async function resolveAIPOIProposalItems(
 
 export async function regenerateAIPOIProposal(tripId: string, notes?: string): Promise<Trip> {
   await generateAIPOIProposal(tripId, notes);
+  const trips = await getTrips();
+  const trip = trips.find((t) => t.id === tripId);
+  if (!trip) throw new Error("Trip not found");
+  return trip;
+}
+
+/** Chiede all'AI un'alternativa per ciascuno dei giorno/slot indicati, in aggiunta all'eventuale proposta pendente. */
+export async function requestAIAlternativesForGaps(
+  tripId: string,
+  gaps: { dayIndex: number; slot: Slot }[],
+  notes?: string
+): Promise<Trip> {
+  await generateAIPOIProposalForSlots(tripId, gaps, notes);
   const trips = await getTrips();
   const trip = trips.find((t) => t.id === tripId);
   if (!trip) throw new Error("Trip not found");

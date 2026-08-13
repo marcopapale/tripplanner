@@ -1,12 +1,28 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Trip, AIPOIProposalItem, SLOTS, SLOT_LABELS } from "@/lib/types";
-import { resolveAIPOIProposalItems, regenerateAIPOIProposal } from "@/app/actions/trip-actions";
+import { Trip, AIPOIProposalItem, Slot, SLOTS, SLOT_LABELS } from "@/lib/types";
+import {
+  resolveAIPOIProposalItems,
+  regenerateAIPOIProposal,
+  requestAIAlternativesForGaps,
+} from "@/app/actions/trip-actions";
 import { formatDayLabel } from "@/lib/dates";
 import { CATEGORY_EMOJI } from "@/lib/mapIcons";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { CreatingTripOverlay } from "@/components/CreatingTripOverlay";
+
+interface Gap {
+  dayIndex: number;
+  slot: Slot;
+}
+
+interface GapPrompt {
+  approveIds: string[];
+  dismissIds: string[];
+  gaps: Gap[];
+}
 
 export function AIPOIProposalReview({
   trip,
@@ -18,9 +34,11 @@ export function AIPOIProposalReview({
   const items = trip.aiPoiProposal ?? [];
   const [selected, setSelected] = useState<Set<string>>(new Set(items.map((i) => i.id)));
   const [resolving, setResolving] = useState(false);
-  const [regenerating, setRegenerating] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
   const [notes, setNotes] = useState("");
+  const [gapPrompt, setGapPrompt] = useState<GapPrompt | null>(null);
+  const [gapNotes, setGapNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -37,24 +55,70 @@ export function AIPOIProposalReview({
     });
   }
 
-  async function handleDiscardOne(id: string) {
+  async function doResolve(approveIds: string[], dismissIds: string[]) {
     setResolving(true);
-    const updated = await resolveAIPOIProposalItems(trip.id, [], [id]);
-    onTripUpdated(updated);
-    setResolving(false);
-  }
-
-  async function handleApproveSelected() {
-    setResolving(true);
-    const approveIds = items.filter((i) => selected.has(i.id)).map((i) => i.id);
-    const dismissIds = items.filter((i) => !selected.has(i.id)).map((i) => i.id);
     const updated = await resolveAIPOIProposalItems(trip.id, approveIds, dismissIds);
     onTripUpdated(updated);
     setResolving(false);
   }
 
+  async function handleDiscardOne(id: string) {
+    await doResolve([], [id]);
+  }
+
+  function computeGaps(approveItems: AIPOIProposalItem[], dismissItems: AIPOIProposalItem[]): Gap[] {
+    const filledKeys = new Set(approveItems.map((i) => `${i.dayIndex}|${i.slot}`));
+    const gapsMap = new Map<string, Gap>();
+    for (const item of dismissItems) {
+      const key = `${item.dayIndex}|${item.slot}`;
+      if (!filledKeys.has(key)) gapsMap.set(key, { dayIndex: item.dayIndex, slot: item.slot });
+    }
+    return [...gapsMap.values()];
+  }
+
+  async function handleApproveSelected() {
+    const approveItems = items.filter((i) => selected.has(i.id));
+    const dismissItems = items.filter((i) => !selected.has(i.id));
+    const gaps = computeGaps(approveItems, dismissItems);
+    if (gaps.length === 0) {
+      await doResolve(
+        approveItems.map((i) => i.id),
+        dismissItems.map((i) => i.id)
+      );
+      return;
+    }
+    setGapPrompt({
+      approveIds: approveItems.map((i) => i.id),
+      dismissIds: dismissItems.map((i) => i.id),
+      gaps,
+    });
+  }
+
+  async function handleGapPromptSkip() {
+    if (!gapPrompt) return;
+    await doResolve(gapPrompt.approveIds, gapPrompt.dismissIds);
+    setGapPrompt(null);
+    setGapNotes("");
+  }
+
+  async function handleGapPromptRequest() {
+    if (!gapPrompt) return;
+    setGenerating(true);
+    setError(null);
+    try {
+      await resolveAIPOIProposalItems(trip.id, gapPrompt.approveIds, gapPrompt.dismissIds);
+      const updated = await requestAIAlternativesForGaps(trip.id, gapPrompt.gaps, gapNotes || undefined);
+      onTripUpdated(updated);
+      setGapPrompt(null);
+      setGapNotes("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Qualcosa è andato storto.");
+    }
+    setGenerating(false);
+  }
+
   async function handleRegenerate() {
-    setRegenerating(true);
+    setGenerating(true);
     setError(null);
     try {
       const updated = await regenerateAIPOIProposal(trip.id, notes || undefined);
@@ -64,7 +128,7 @@ export function AIPOIProposalReview({
     } catch (err) {
       setError(err instanceof Error ? err.message : "Qualcosa è andato storto.");
     }
-    setRegenerating(false);
+    setGenerating(false);
   }
 
   const byDay = new Map<number, AIPOIProposalItem[]>();
@@ -74,8 +138,62 @@ export function AIPOIProposalReview({
   }
   const dayIndexes = [...byDay.keys()].sort((a, b) => a - b);
 
+  if (gapPrompt) {
+    return (
+      <div className="space-y-3">
+        {generating && <CreatingTripOverlay />}
+        <Card className="p-4 space-y-3 border-sunset/30 bg-sand/30">
+          <div>
+            <p className="text-sm font-semibold text-gray-700">
+              {gapPrompt.gaps.length === 1
+                ? "Un momento dell'itinerario resterà senza proposta approvata"
+                : `${gapPrompt.gaps.length} momenti dell'itinerario resteranno senza proposta approvata`}
+            </p>
+            <ul className="text-xs text-gray-500 mt-1 space-y-0.5">
+              {gapPrompt.gaps.map((g) => (
+                <li key={`${g.dayIndex}-${g.slot}`}>
+                  Giorno {g.dayIndex + 1} · {formatDayLabel(trip.startDate, g.dayIndex)} —{" "}
+                  {SLOT_LABELS[g.slot]}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <p className="text-xs text-gray-500">
+            Vuoi che l&apos;AI proponga delle alternative per questi momenti?
+          </p>
+          <textarea
+            value={gapNotes}
+            onChange={(e) => setGapNotes(e.target.value)}
+            placeholder="Note per l'AI su cosa vorresti in questi momenti (opzionale)…"
+            rows={2}
+            className="w-full rounded-2xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-lagoon focus:ring-2 focus:ring-lagoon/20 transition bg-white"
+          />
+          {error && <p className="text-xs text-red-500">{error}</p>}
+          <div className="flex gap-2">
+            <Button
+              onClick={handleGapPromptRequest}
+              disabled={generating || resolving}
+              className="flex-1 py-2"
+            >
+              Sì, chiedi alternative
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={handleGapPromptSkip}
+              disabled={generating || resolving}
+              className="py-2"
+            >
+              No, procedi senza
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
+      {generating && <CreatingTripOverlay />}
       {items.length === 0 ? (
         <p className="text-sm text-gray-400">
           Nessuna proposta AI disponibile al momento. Puoi generarne una nuova qui sotto.
@@ -163,10 +281,10 @@ export function AIPOIProposalReview({
               <Button
                 variant="secondary"
                 onClick={handleRegenerate}
-                disabled={regenerating}
+                disabled={generating}
                 className="flex-1 py-2"
               >
-                {regenerating ? "Rigenero…" : "🔁 Rigenera proposta"}
+                🔁 Rigenera proposta
               </Button>
               <Button variant="ghost" onClick={() => setShowNotes(false)} className="py-2">
                 Annulla

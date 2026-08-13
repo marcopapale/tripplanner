@@ -7,14 +7,24 @@ import { AdminDashboard } from "@/components/admin/AdminDashboard";
 // at build time — otherwise deletions/edits wouldn't show up in production.
 export const dynamic = "force-dynamic";
 
-export default async function AdminPage() {
-  const [trips, pois, settings] = await Promise.all([getTrips(), listAllPOIs(), getSettings()]);
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ trip?: string }>;
+}) {
+  const [{ trip }, trips, pois, settings] = await Promise.all([
+    searchParams,
+    getTrips(),
+    listAllPOIs(),
+    getSettings(),
+  ]);
   return (
     <AdminDashboard
       initialTrips={trips}
       initialPOIs={pois}
       poiProvider={settings.poiProvider}
       googleMapsBrowserKey={settings.googleMapsBrowserKey}
+      initialSelectedTripId={trip}
     />
   );
 }
