@@ -10,6 +10,11 @@ export const dynamic = "force-dynamic";
 export default async function AdminPage() {
   const [trips, pois, settings] = await Promise.all([getTrips(), listAllPOIs(), getSettings()]);
   return (
-    <AdminDashboard initialTrips={trips} initialPOIs={pois} poiProvider={settings.poiProvider} />
+    <AdminDashboard
+      initialTrips={trips}
+      initialPOIs={pois}
+      poiProvider={settings.poiProvider}
+      googleMapsBrowserKey={settings.googleMapsBrowserKey}
+    />
   );
 }

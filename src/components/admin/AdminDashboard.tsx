@@ -39,10 +39,12 @@ export function AdminDashboard({
   initialTrips,
   initialPOIs,
   poiProvider,
+  googleMapsBrowserKey,
 }: {
   initialTrips: Trip[];
   initialPOIs: POI[];
   poiProvider: POIProvider;
+  googleMapsBrowserKey?: string;
 }) {
   const [trips, setTrips] = useState(initialTrips);
   const [pois, setPois] = useState(initialPOIs);
@@ -247,6 +249,7 @@ export function AdminDashboard({
                       catalogPOIs={tripPOIs}
                       selectedDay={selectedDay}
                       poiProvider={poiProvider}
+                      googleMapsBrowserKey={googleMapsBrowserKey}
                       onAssignExisting={handleAssignExisting}
                       onAddAndAssign={handleAddAndAssign}
                     />

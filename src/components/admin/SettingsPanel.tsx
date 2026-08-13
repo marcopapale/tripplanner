@@ -86,6 +86,9 @@ export function SettingsPanel({ initialSettings }: { initialSettings: AppSetting
   const [poiProvider, setPoiProvider] = useState<POIProvider>(initialSettings.poiProvider);
   const [foursquareApiKey, setFoursquareApiKey] = useState(initialSettings.foursquareApiKey ?? "");
   const [googleApiKey, setGoogleApiKey] = useState(initialSettings.googleApiKey ?? "");
+  const [googleMapsBrowserKey, setGoogleMapsBrowserKey] = useState(
+    initialSettings.googleMapsBrowserKey ?? ""
+  );
   const [anthropicApiKey, setAnthropicApiKey] = useState(initialSettings.anthropicApiKey ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -95,7 +98,13 @@ export function SettingsPanel({ initialSettings }: { initialSettings: AppSetting
 
   async function handleSave() {
     setSaving(true);
-    await updateAppSettings({ poiProvider, foursquareApiKey, googleApiKey, anthropicApiKey });
+    await updateAppSettings({
+      poiProvider,
+      foursquareApiKey,
+      googleApiKey,
+      googleMapsBrowserKey,
+      anthropicApiKey,
+    });
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 1800);
@@ -196,6 +205,25 @@ export function SettingsPanel({ initialSettings }: { initialSettings: AppSetting
               {testResult && <TestResultCard result={testResult} provider="google" />}
             </div>
           )}
+        </Card>
+
+        <Card className="p-6 space-y-4">
+          <div>
+            <h2 className="text-sm font-bold text-gray-700 mb-1">Mappa (Google Maps)</h2>
+            <p className="text-xs text-gray-500 mb-3">
+              Chiave usata per mostrare la mappa nel browser (visibile nel codice della pagina).
+              Diversa da quella usata per la ricerca POI qui sopra: questa deve essere ristretta
+              per "Siti web" al tuo dominio (es. <code>*.vercel.app</code>) nella Google Cloud
+              Console — l'altra invece non va ristretta per dominio, viene chiamata dal server.
+            </p>
+            <Label>Google Maps JavaScript API Key</Label>
+            <Input
+              type="password"
+              placeholder="Incolla qui la tua API key"
+              value={googleMapsBrowserKey}
+              onChange={(e) => setGoogleMapsBrowserKey(e.target.value)}
+            />
+          </div>
         </Card>
 
         <Card className="p-6 space-y-4">

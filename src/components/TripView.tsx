@@ -12,16 +12,27 @@ import {
 } from "@/lib/dates";
 import { Card } from "@/components/ui/Card";
 
-const MapView = dynamic(() => import("@/components/MapView").then((m) => m.MapView), {
-  ssr: false,
-  loading: () => (
-    <div className="h-full w-full flex items-center justify-center text-sm text-gray-400">
-      Caricamento mappa…
-    </div>
-  ),
-});
+const GoogleMapView = dynamic(
+  () => import("@/components/GoogleMapView").then((m) => m.GoogleMapView),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center text-sm text-gray-400">
+        Caricamento mappa…
+      </div>
+    ),
+  }
+);
 
-export function TripView({ trip, pois }: { trip: Trip; pois: POI[] }) {
+export function TripView({
+  trip,
+  pois,
+  googleMapsBrowserKey,
+}: {
+  trip: Trip;
+  pois: POI[];
+  googleMapsBrowserKey?: string;
+}) {
   const status = tripStatus(trip.startDate, trip.endDate);
   const daysLeft = daysUntilStart(trip.startDate);
   const ongoingDay = currentDayIndex(trip.startDate, trip.endDate);
@@ -110,12 +121,19 @@ export function TripView({ trip, pois }: { trip: Trip; pois: POI[] }) {
 
         <div className="grid md:grid-cols-5 gap-4 flex-1 min-h-[420px]">
           <Card className="md:col-span-3 overflow-hidden p-0 min-h-[320px]">
-            <MapView
-              centerLat={trip.lat}
-              centerLon={trip.lon}
-              destinationName={trip.destination}
-              markers={markers}
-            />
+            {googleMapsBrowserKey ? (
+              <GoogleMapView
+                apiKey={googleMapsBrowserKey}
+                centerLat={trip.lat}
+                centerLon={trip.lon}
+                destinationName={trip.destination}
+                markers={markers}
+              />
+            ) : (
+              <div className="h-full w-full flex items-center justify-center text-sm text-gray-400 text-center px-4">
+                Mappa non configurata: aggiungi la Google Maps API Key nelle Impostazioni.
+              </div>
+            )}
           </Card>
 
           <div className="md:col-span-2 space-y-3 overflow-y-auto max-h-[600px] pr-1">

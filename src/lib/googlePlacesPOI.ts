@@ -12,7 +12,7 @@ import { boundsToCenterRadius } from "./mapMath";
 
 const SEARCH_URL = "https://places.googleapis.com/v1/places:searchNearby";
 const FIELD_MASK =
-  "places.displayName,places.location,places.rating,places.priceLevel,places.formattedAddress";
+  "places.id,places.displayName,places.location,places.rating,places.priceLevel,places.formattedAddress";
 
 const CATEGORY_TYPES: Partial<Record<POICategory, string[]>> = {
   monumento: ["monument", "historical_landmark", "historical_place"],
@@ -35,6 +35,7 @@ const PRICE_LEVEL_MAP: Record<string, number | undefined> = {
 };
 
 interface GooglePlace {
+  id?: string;
   displayName?: { text?: string };
   location?: { latitude?: number; longitude?: number };
   formattedAddress?: string;
@@ -81,6 +82,7 @@ async function searchByType(
         validSlots: POI_CATEGORY_DEFAULT_SLOTS[category],
         rating: p.rating,
         priceLevel: p.priceLevel ? PRICE_LEVEL_MAP[p.priceLevel] : undefined,
+        placeId: p.id,
       }));
   } catch {
     return [];

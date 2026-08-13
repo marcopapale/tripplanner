@@ -30,16 +30,6 @@ body {
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
 
-.leaflet-container {
-  width: 100%;
-  height: 100%;
-  border-radius: 1.5rem;
-}
-
-.leaflet-popup-content-wrapper {
-  border-radius: 1rem;
-}
-
 @keyframes trip-bounce {
   0%, 100% {
     transform: translate(-3px, -2px) rotate(-8deg);
@@ -51,4 +41,25 @@ body {
 
 .animate-trip-bounce {
   animation: trip-bounce 1.6s ease-in-out infinite;
+}
+
+/* Place UI Kit theming — mapped to our own palette/font instead of Google's
+   sample values, so the card matches the rest of the app. */
+.gmp-card-theme {
+  max-width: 100%;
+  --gmp-button-border-color: var(--sunset);
+  --gmp-button-border-width: 1px;
+  --gmp-mat-color-info: var(--foreground);
+  --gmp-mat-color-on-secondary-container: var(--sunset-dark);
+  --gmp-mat-color-on-surface-variant: var(--foreground);
+  --gmp-mat-color-on-surface: var(--foreground);
+  --gmp-mat-color-positive: var(--lagoon-dark);
+  --gmp-mat-color-primary: var(--sunset);
+  --gmp-mat-color-secondary-container: var(--sand);
+  --gmp-mat-color-surface: #ffffff;
+  --gmp-mat-font-family: var(--font-sans, Arial, Helvetica, sans-serif);
+  --gmp-mat-font-body-medium: normal 500 0.875em/1.25em var(--gmp-mat-font-family);
+  --gmp-mat-font-body-small: normal 400 12px/16px var(--gmp-mat-font-family);
+  --gmp-mat-font-label-large: normal 500 14px/24px var(--gmp-mat-font-family);
+  --gmp-mat-font-title-small: normal 600 1.25em/1.45em var(--gmp-mat-font-family);
 }

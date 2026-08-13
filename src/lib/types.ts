@@ -72,6 +72,7 @@ export interface POI {
   validSlots: Slot[];
   rating?: number; // 0-5 scale
   priceLevel?: number; // 1-4 ($ to $$$$)
+  placeId?: string; // Google Place ID, when sourced from Google Places — enables the rich Place UI Kit card
 }
 
 export interface Participant {
@@ -100,6 +101,7 @@ export interface Trip {
   itinerary: ItineraryDay[]; // index = day number (0-based)
   createdAt: string;
   shared?: boolean; // true once the admin has explicitly shared participant links
+  aiCategories?: POICategory[]; // AI-curated categories for this destination, cached on first admin visit
 }
 
 export type POIProvider = "osm" | "foursquare" | "google";
@@ -113,7 +115,8 @@ export const POI_PROVIDER_LABELS: Record<POIProvider, string> = {
 export interface AppSettings {
   poiProvider: POIProvider;
   foursquareApiKey?: string;
-  googleApiKey?: string;
+  googleApiKey?: string; // server-side, used for Places REST search
+  googleMapsBrowserKey?: string; // client-side, loaded in the browser — must be HTTP-referrer restricted
   anthropicApiKey?: string;
 }
 

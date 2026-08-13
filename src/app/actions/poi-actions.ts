@@ -17,6 +17,7 @@ export interface NewPOIInput {
   validSlots: Slot[];
   rating?: number;
   priceLevel?: number;
+  placeId?: string;
 }
 
 export async function addPOI(input: NewPOIInput): Promise<POI> {
@@ -32,6 +33,7 @@ export async function addPOI(input: NewPOIInput): Promise<POI> {
     validSlots: input.validSlots.length ? input.validSlots : POI_CATEGORY_DEFAULT_SLOTS[input.category],
     rating: input.rating,
     priceLevel: input.priceLevel,
+    placeId: input.placeId,
   };
   await savePOIs([...pois, poi]);
   return poi;
