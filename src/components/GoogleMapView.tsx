@@ -44,7 +44,13 @@ export function GoogleMapView({
           gestureHandling: "cooperative",
           streetViewControl: false,
           fullscreenControl: false,
-          clickableIcons: false,
+        });
+        // clickableIcons:false disabilita i click su TUTTA la mappa vettoriale
+        // (bug noto con mapId): blocchiamo solo il popup nativo delle icone POI.
+        mapRef.current.addListener("click", (e: google.maps.MapMouseEvent & { placeId?: string }) => {
+          if (e.placeId) {
+            e.stop();
+          }
         });
         setReady(true);
       })
