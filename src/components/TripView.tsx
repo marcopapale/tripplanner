@@ -135,8 +135,18 @@ export function TripView({ trip, pois }: { trip: Trip; pois: POI[] }) {
                         if (!poi) return null;
                         return (
                           <li key={id} className="text-sm font-medium flex items-center gap-2">
-                            <span className="h-1.5 w-1.5 rounded-full bg-lagoon" />
-                            {poi.name}
+                            <span className="h-1.5 w-1.5 rounded-full bg-lagoon shrink-0" />
+                            <span className="truncate">{poi.name}</span>
+                            {poi.rating && (
+                              <span className="text-xs text-gray-400 shrink-0">
+                                ⭐ {poi.rating.toFixed(1)}
+                              </span>
+                            )}
+                            {poi.priceLevel && (
+                              <span className="text-xs text-gray-400 shrink-0">
+                                {"$".repeat(poi.priceLevel)}
+                              </span>
+                            )}
                           </li>
                         );
                       })}

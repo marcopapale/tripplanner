@@ -1,7 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { get, put } from "@vercel/blob";
-import { Trip, POI } from "./types";
+import { Trip, POI, AppSettings, DEFAULT_SETTINGS } from "./types";
 
 /**
  * Storage layer isolated behind this module: still just JSON, no database.
@@ -22,8 +22,10 @@ if (!USE_BLOB && process.env.VERCEL) {
 const DATA_DIR = path.join(process.cwd(), "data");
 const TRIPS_FILE = path.join(DATA_DIR, "trips.json");
 const POIS_FILE = path.join(DATA_DIR, "pois.json");
+const SETTINGS_FILE = path.join(DATA_DIR, "settings.json");
 const TRIPS_BLOB_PATH = "data/trips.json";
 const POIS_BLOB_PATH = "data/pois.json";
+const SETTINGS_BLOB_PATH = "data/settings.json";
 
 async function readLocalJSON<T>(file: string, fallback: T): Promise<T> {
   try {
@@ -102,4 +104,12 @@ export async function getPOIs(): Promise<POI[]> {
 
 export async function savePOIs(pois: POI[]): Promise<void> {
   await writeJSON(POIS_FILE, POIS_BLOB_PATH, pois);
+}
+
+export async function getSettings(): Promise<AppSettings> {
+  return readJSON<AppSettings>(SETTINGS_FILE, SETTINGS_BLOB_PATH, DEFAULT_SETTINGS);
+}
+
+export async function saveSettings(settings: AppSettings): Promise<void> {
+  await writeJSON(SETTINGS_FILE, SETTINGS_BLOB_PATH, settings);
 }

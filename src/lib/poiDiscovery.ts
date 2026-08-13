@@ -62,7 +62,7 @@ function categoryFromTags(tags: Record<string, string>): POICategory {
   return "altro";
 }
 
-type DiscoveredPOI = Omit<POI, "id" | "tripId">;
+export type DiscoveredPOI = Omit<POI, "id" | "tripId">;
 
 function elementsToPOIs(elements: OverpassElement[], limit: number): DiscoveredPOI[] {
   const seen = new Set<string>();

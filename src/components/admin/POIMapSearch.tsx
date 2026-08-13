@@ -25,6 +25,18 @@ interface SearchResult {
   lat: number;
   lon: number;
   description?: string;
+  rating?: number;
+  priceLevel?: number;
+}
+
+function RatingBadge({ rating, priceLevel }: { rating?: number; priceLevel?: number }) {
+  if (!rating && !priceLevel) return null;
+  return (
+    <p className="text-xs text-gray-500 flex items-center gap-1.5">
+      {rating && <span>⭐ {rating.toFixed(1)}</span>}
+      {priceLevel && <span>{"$".repeat(priceLevel)}</span>}
+    </p>
+  );
 }
 
 function BoundsWatcher({ onChange }: { onChange: (b: MapBounds) => void }) {
@@ -46,12 +58,16 @@ function BoundsWatcher({ onChange }: { onChange: (b: MapBounds) => void }) {
 function AssignForm({
   name,
   category,
+  rating,
+  priceLevel,
   trip,
   defaultDay,
   onConfirm,
 }: {
   name: string;
   category: POICategory;
+  rating?: number;
+  priceLevel?: number;
   trip: Trip;
   defaultDay: number;
   onConfirm: (dayIndex: number, slots: Slot[]) => Promise<void>;
@@ -78,6 +94,7 @@ function AssignForm({
   return (
     <div className="space-y-2 min-w-[180px]">
       <p className="text-sm font-semibold">{name}</p>
+      <RatingBadge rating={rating} priceLevel={priceLevel} />
       <select
         value={day}
         onChange={(e) => setDay(parseInt(e.target.value, 10))}
@@ -237,6 +254,8 @@ export function POIMapSearch({
                 <AssignForm
                   name={`${poi.name} (nel catalogo)`}
                   category={poi.category}
+                  rating={poi.rating}
+                  priceLevel={poi.priceLevel}
                   trip={trip}
                   defaultDay={selectedDay}
                   onConfirm={(day, slots) => onAssignExisting(poi, day, slots)}
@@ -251,6 +270,8 @@ export function POIMapSearch({
                 <AssignForm
                   name={r.name}
                   category={r.category}
+                  rating={r.rating}
+                  priceLevel={r.priceLevel}
                   trip={trip}
                   defaultDay={selectedDay}
                   onConfirm={(day, slots) =>
@@ -262,6 +283,8 @@ export function POIMapSearch({
                         lon: r.lon,
                         description: r.description,
                         validSlots: POI_CATEGORY_DEFAULT_SLOTS[r.category],
+                        rating: r.rating,
+                        priceLevel: r.priceLevel,
                       },
                       day,
                       slots

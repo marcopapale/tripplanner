@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import {
   Trip,
   POI,
@@ -19,6 +20,7 @@ import { formatDateRange, formatDayLabel } from "@/lib/dates";
 import { Card, Input, Label } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { TripDetailsPanel } from "@/components/admin/TripDetailsPanel";
+import { AISuggestionsPanel } from "@/components/admin/AISuggestionsPanel";
 
 const POIMapSearch = dynamic(
   () => import("@/components/admin/POIMapSearch").then((m) => m.POIMapSearch),
@@ -155,9 +157,14 @@ export function AdminDashboard({
       <header className="border-b border-gray-100 bg-white">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="font-bold">Gestionale Viaggi</h1>
-          <form action={adminLogout}>
-            <button className="text-xs text-gray-400 hover:text-gray-600">Esci</button>
-          </form>
+          <div className="flex items-center gap-4">
+            <Link href="/admin/settings" className="text-xs text-gray-400 hover:text-gray-600">
+              ⚙️ Impostazioni
+            </Link>
+            <form action={adminLogout}>
+              <button className="text-xs text-gray-400 hover:text-gray-600">Esci</button>
+            </form>
+          </div>
         </div>
       </header>
 
@@ -315,6 +322,11 @@ export function AdminDashboard({
                           <p className="text-xs text-gray-400 text-center">{refreshMsg}</p>
                         )}
 
+                        <AISuggestionsPanel
+                          tripId={selectedTrip.id}
+                          onAdded={(poi) => setPois((prev) => [...prev, poi])}
+                        />
+
                         <button
                           onClick={() => setShowAddPOI((v) => !v)}
                           className="text-xs font-semibold text-sunset-dark hover:underline"
@@ -342,8 +354,10 @@ export function AdminDashboard({
                             >
                               <div className="min-w-0">
                                 <p className="text-sm font-medium truncate">{poi.name}</p>
-                                <p className="text-xs text-gray-400">
+                                <p className="text-xs text-gray-400 flex items-center gap-1.5">
                                   {POI_CATEGORY_LABELS[poi.category]}
+                                  {poi.rating && <span>· ⭐ {poi.rating.toFixed(1)}</span>}
+                                  {poi.priceLevel && <span>{"$".repeat(poi.priceLevel)}</span>}
                                 </p>
                               </div>
                               <button

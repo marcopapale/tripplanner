@@ -1,0 +1,107 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { AppSettings, POIProvider, POI_PROVIDER_LABELS } from "@/lib/types";
+import { updateAppSettings } from "@/app/actions/settings-actions";
+import { Card, Input, Label } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+
+const PROVIDERS: POIProvider[] = ["osm", "foursquare"];
+
+export function SettingsPanel({ initialSettings }: { initialSettings: AppSettings }) {
+  const [poiProvider, setPoiProvider] = useState<POIProvider>(initialSettings.poiProvider);
+  const [foursquareApiKey, setFoursquareApiKey] = useState(initialSettings.foursquareApiKey ?? "");
+  const [anthropicApiKey, setAnthropicApiKey] = useState(initialSettings.anthropicApiKey ?? "");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  async function handleSave() {
+    setSaving(true);
+    await updateAppSettings({ poiProvider, foursquareApiKey, anthropicApiKey });
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1800);
+  }
+
+  return (
+    <main className="flex-1 bg-gradient-to-b from-sky to-white">
+      <header className="border-b border-gray-100 bg-white">
+        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
+          <h1 className="font-bold">Impostazioni</h1>
+          <Link href="/admin" className="text-xs text-gray-400 hover:text-gray-600">
+            ← Torna al Gestionale
+          </Link>
+        </div>
+      </header>
+
+      <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
+        <Card className="p-6 space-y-4">
+          <div>
+            <h2 className="text-sm font-bold text-gray-700 mb-1">Provider ricerca POI</h2>
+            <p className="text-xs text-gray-500 mb-3">
+              Determina da dove vengono cercati i punti di interesse nella mappa del Gestionale.
+            </p>
+            <div className="grid sm:grid-cols-2 gap-3">
+              {PROVIDERS.map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setPoiProvider(p)}
+                  className={`text-left rounded-2xl border p-3 transition-colors ${
+                    poiProvider === p
+                      ? "border-sunset bg-sand/60"
+                      : "border-gray-200 hover:bg-gray-50"
+                  }`}
+                >
+                  <p className="text-sm font-semibold">{POI_PROVIDER_LABELS[p]}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {p === "osm"
+                      ? "Gratuito, nessuna chiave richiesta. Nessun rating o fascia di prezzo."
+                      : "Include rating e fascia di prezzo per i ristoranti. Richiede una API key gratuita."}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {poiProvider === "foursquare" && (
+            <div>
+              <Label>Foursquare API Key</Label>
+              <Input
+                type="password"
+                placeholder="Incolla qui la tua API key"
+                value={foursquareApiKey}
+                onChange={(e) => setFoursquareApiKey(e.target.value)}
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                La trovi nel tuo account Foursquare Developer, sezione "API Keys" del progetto.
+              </p>
+            </div>
+          )}
+        </Card>
+
+        <Card className="p-6 space-y-4">
+          <div>
+            <h2 className="text-sm font-bold text-gray-700 mb-1">AI — Suggerimenti attività</h2>
+            <p className="text-xs text-gray-500 mb-3">
+              Usa Claude per suggerire le attività principali da fare nella destinazione, in base
+              alla durata del viaggio. Opzionale.
+            </p>
+            <Label>Anthropic API Key</Label>
+            <Input
+              type="password"
+              placeholder="sk-ant-..."
+              value={anthropicApiKey}
+              onChange={(e) => setAnthropicApiKey(e.target.value)}
+            />
+          </div>
+        </Card>
+
+        <Button onClick={handleSave} disabled={saving} className="py-2.5">
+          {saving ? "Salvataggio…" : saved ? "Salvato ✓" : "Salva impostazioni"}
+        </Button>
+      </div>
+    </main>
+  );
+}

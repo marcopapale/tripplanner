@@ -73,6 +73,12 @@ export function MapView({
           <Popup>
             <div className="text-sm">
               <p className="font-semibold">{poi.name}</p>
+              {(poi.rating || poi.priceLevel) && (
+                <p className="text-gray-500 text-xs">
+                  {poi.rating && <span>⭐ {poi.rating.toFixed(1)} </span>}
+                  {poi.priceLevel && <span>{"$".repeat(poi.priceLevel)}</span>}
+                </p>
+              )}
               {poi.description && <p className="text-gray-500">{poi.description}</p>}
               {slots.length > 0 && (
                 <p className="text-xs text-lagoon-dark mt-1">

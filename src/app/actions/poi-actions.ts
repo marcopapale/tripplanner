@@ -1,9 +1,10 @@
 "use server";
 
 import { nanoid } from "nanoid";
-import { getPOIs, savePOIs, getTrips, upsertTrip } from "@/lib/db";
+import { getPOIs, savePOIs, getTrips, upsertTrip, getSettings } from "@/lib/db";
 import { POI, POICategory, POI_CATEGORY_DEFAULT_SLOTS, Slot } from "@/lib/types";
 import { searchPOIsInBounds, MapBounds } from "@/lib/poiDiscovery";
+import { searchFoursquarePOIsInBounds } from "@/lib/foursquarePOI";
 
 export interface NewPOIInput {
   tripId: string;
@@ -13,6 +14,8 @@ export interface NewPOIInput {
   lon: number;
   description?: string;
   validSlots: Slot[];
+  rating?: number;
+  priceLevel?: number;
 }
 
 export async function addPOI(input: NewPOIInput): Promise<POI> {
@@ -26,6 +29,8 @@ export async function addPOI(input: NewPOIInput): Promise<POI> {
     lon: input.lon,
     description: input.description,
     validSlots: input.validSlots.length ? input.validSlots : POI_CATEGORY_DEFAULT_SLOTS[input.category],
+    rating: input.rating,
+    priceLevel: input.priceLevel,
   };
   await savePOIs([...pois, poi]);
   return poi;
@@ -65,6 +70,10 @@ export async function searchAreaPOIs(
   bounds: MapBounds,
   categories: POICategory[]
 ): Promise<Omit<POI, "id" | "tripId">[]> {
+  const settings = await getSettings();
+  if (settings.poiProvider === "foursquare" && settings.foursquareApiKey) {
+    return searchFoursquarePOIsInBounds(bounds, categories, settings.foursquareApiKey);
+  }
   return searchPOIsInBounds(bounds, categories);
 }
 
