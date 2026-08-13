@@ -280,6 +280,11 @@ export function POIMapSearch({
     const map = mapRef.current;
     if (!mapReady || !g || !map) return;
 
+    // DIAGNOSTICA TEMPORANEA — rimuovere dopo aver isolato il bug dei click.
+    console.debug(
+      `[map-debug] rebuild marker effect: catalog=${catalogPOIs.length} results=${visibleResults.length}`
+    );
+
     markerObjsRef.current.forEach((m) => (m.map = null));
     markerObjsRef.current = [];
 
@@ -296,7 +301,13 @@ export function POIMapSearch({
         title: poi.name,
         content: el,
       });
-      marker.addEventListener("gmp-click", () => setSelected({ kind: "catalog", poi }));
+      marker.addEventListener("gmp-click", () => {
+        console.debug(`[map-debug] gmp-click catalog: ${poi.name}`);
+        setSelected({ kind: "catalog", poi });
+      });
+      el.addEventListener("pointerdown", () =>
+        console.debug(`[map-debug] pointerdown on catalog marker: ${poi.name}`)
+      );
       markerObjsRef.current.push(marker);
     }
 
@@ -313,7 +324,13 @@ export function POIMapSearch({
         title: r.name,
         content: el,
       });
-      marker.addEventListener("gmp-click", () => setSelected({ kind: "result", result: r }));
+      marker.addEventListener("gmp-click", () => {
+        console.debug(`[map-debug] gmp-click result: ${r.name}`);
+        setSelected({ kind: "result", result: r });
+      });
+      el.addEventListener("pointerdown", () =>
+        console.debug(`[map-debug] pointerdown on result marker: ${r.name}`)
+      );
       markerObjsRef.current.push(marker);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
