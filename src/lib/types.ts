@@ -70,7 +70,7 @@ export interface POI {
   lon: number;
   description?: string;
   validSlots: Slot[];
-  rating?: number; // 0-10 scale
+  rating?: number; // 0-5 scale
   priceLevel?: number; // 1-4 ($ to $$$$)
 }
 
@@ -102,16 +102,18 @@ export interface Trip {
   shared?: boolean; // true once the admin has explicitly shared participant links
 }
 
-export type POIProvider = "osm" | "foursquare";
+export type POIProvider = "osm" | "foursquare" | "google";
 
 export const POI_PROVIDER_LABELS: Record<POIProvider, string> = {
   osm: "OpenStreetMap (gratuito)",
   foursquare: "Foursquare Places",
+  google: "Google Places",
 };
 
 export interface AppSettings {
   poiProvider: POIProvider;
   foursquareApiKey?: string;
+  googleApiKey?: string;
   anthropicApiKey?: string;
 }
 

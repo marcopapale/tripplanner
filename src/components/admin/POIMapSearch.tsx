@@ -209,21 +209,17 @@ export function POIMapSearch({
     (r) => !catalogKeys.has(`${r.name.toLowerCase()}|${r.lat.toFixed(4)}|${r.lon.toFixed(4)}`)
   );
 
+  const providerColor =
+    poiProvider === "foursquare" ? "#F04077" : poiProvider === "google" ? "#4285F4" : "#0d9488";
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <span
           className="inline-flex items-center gap-1.5 text-[11px] font-semibold rounded-full px-2.5 py-1"
-          style={
-            poiProvider === "foursquare"
-              ? { background: "#F0407733", color: "#F04077" }
-              : { background: "#eef7f9", color: "#0d9488" }
-          }
+          style={{ background: `${providerColor}1a`, color: providerColor }}
         >
-          <span
-            className="h-1.5 w-1.5 rounded-full"
-            style={{ background: poiProvider === "foursquare" ? "#F04077" : "#0d9488" }}
-          />
+          <span className="h-1.5 w-1.5 rounded-full" style={{ background: providerColor }} />
           Provider: {POI_PROVIDER_LABELS[poiProvider]}
         </span>
         <a href="/admin/settings" className="text-[11px] text-gray-400 hover:text-gray-600">

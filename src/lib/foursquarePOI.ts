@@ -1,5 +1,6 @@
 import { POICategory, POI_CATEGORY_DEFAULT_SLOTS } from "./types";
 import { MapBounds, DiscoveredPOI } from "./poiDiscovery";
+import { boundsToCenterRadius } from "./mapMath";
 
 /**
  * Foursquare Places API backed POI search. Unlike OpenStreetMap, it can
@@ -46,19 +47,6 @@ function fsqHeaders(apiKey: string): HeadersInit {
   };
 }
 
-function boundsToCenterRadius(bounds: MapBounds): { lat: number; lon: number; radius: number } {
-  const lat = (bounds.north + bounds.south) / 2;
-  const lon = (bounds.east + bounds.west) / 2;
-  const R = 6371000; // meters
-  const dLat = ((bounds.north - lat) * Math.PI) / 180;
-  const dLon = ((bounds.east - lon) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat * Math.PI) / 180) * Math.cos((lat * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
-  const radius = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return { lat, lon, radius: Math.min(Math.max(radius, 500), 100000) };
-}
-
 async function searchByQuery(
   apiKey: string,
   lat: number,
@@ -89,7 +77,7 @@ async function searchByQuery(
         lon: p.longitude!,
         description: p.location?.formatted_address,
         validSlots: POI_CATEGORY_DEFAULT_SLOTS[category],
-        rating: p.rating,
+        rating: p.rating != null ? p.rating / 2 : undefined, // Foursquare uses 0-10, we normalize to 0-5
         priceLevel: p.price,
       }));
   } catch {
@@ -124,7 +112,7 @@ export async function searchFoursquarePOIsInBounds(
   categories: POICategory[],
   apiKey: string
 ): Promise<DiscoveredPOI[]> {
-  const { lat, lon, radius } = boundsToCenterRadius(bounds);
+  const { lat, lon, radius } = boundsToCenterRadius(bounds, 100000);
 
   const batches = await Promise.all(
     categories
