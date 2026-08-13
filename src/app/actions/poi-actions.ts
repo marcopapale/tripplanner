@@ -4,7 +4,6 @@ import { nanoid } from "nanoid";
 import { getPOIs, savePOIs, getTrips, upsertTrip, getSettings } from "@/lib/db";
 import { POI, POICategory, POI_CATEGORY_DEFAULT_SLOTS, Slot } from "@/lib/types";
 import { searchPOIsInBounds, MapBounds } from "@/lib/poiDiscovery";
-import { searchFoursquarePOIsInBounds } from "@/lib/foursquarePOI";
 import { searchGooglePOIsInBounds } from "@/lib/googlePlacesPOI";
 
 export interface NewPOIInput {
@@ -74,9 +73,6 @@ export async function searchAreaPOIs(
   categories: POICategory[]
 ): Promise<Omit<POI, "id" | "tripId">[]> {
   const settings = await getSettings();
-  if (settings.poiProvider === "foursquare" && settings.foursquareApiKey) {
-    return searchFoursquarePOIsInBounds(bounds, categories, settings.foursquareApiKey);
-  }
   if (settings.poiProvider === "google" && settings.googleApiKey) {
     return searchGooglePOIsInBounds(bounds, categories, settings.googleApiKey);
   }

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getTripForOrganizer } from "@/app/actions/trip-actions";
 import { Card } from "@/components/ui/Card";
 import { formatDateRange } from "@/lib/dates";
+import { TripCreatedPanel } from "@/components/TripCreatedPanel";
 
 export default async function TripCreatedPage({
   params,
@@ -24,10 +25,12 @@ export default async function TripCreatedPage({
           <p className="text-gray-500">{formatDateRange(trip.startDate, trip.endDate)}</p>
         </div>
 
+        <TripCreatedPanel initialTrip={trip} />
+
         <Card className="p-6 text-center space-y-3">
           <p className="text-sm text-gray-600">
-            Ora completa il programma del viaggio dal Gestionale: quando è pronto, potrai
-            condividere i link di accesso con i {trip.participants.length}{" "}
+            Completa il programma del viaggio dal Gestionale: quando è pronto, potrai condividere i
+            link di accesso con i {trip.participants.length}{" "}
             {trip.participants.length === 1 ? "partecipante" : "partecipanti"}.
           </p>
           <Link

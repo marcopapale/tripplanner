@@ -339,8 +339,7 @@ export function POIMapSearch({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapReady, catalogPOIs, visibleResults]);
 
-  const providerColor =
-    poiProvider === "foursquare" ? "#F04077" : poiProvider === "google" ? "#4285F4" : "#0d9488";
+  const providerColor = poiProvider === "google" ? "#4285F4" : "#0d9488";
 
   return (
     <div className="space-y-2">

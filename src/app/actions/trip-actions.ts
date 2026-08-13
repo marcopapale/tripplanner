@@ -11,14 +11,24 @@ import {
 } from "@/lib/db";
 import { generateToken } from "@/lib/token";
 import { geocodeDestination } from "@/lib/geocode";
-import { discoverPOIs, toPOIs } from "@/lib/poiDiscovery";
+import { generateAIPOIProposal } from "@/app/actions/ai-actions";
+import { findOrCreatePOI } from "@/app/actions/poi-actions";
 import { tripDayCount } from "@/lib/dates";
-import { Trip, ItineraryDay, Slot, Participant, DEFAULT_ACCENT_COLOR } from "@/lib/types";
+import {
+  Trip,
+  ItineraryDay,
+  Slot,
+  Participant,
+  TransportMode,
+  DEFAULT_ACCENT_COLOR,
+  POI_CATEGORY_DEFAULT_SLOTS,
+} from "@/lib/types";
 
 export interface CreateTripInput {
   destination: string;
   startDate: string;
   endDate: string;
+  transportMode: TransportMode;
   participants: { firstName: string; lastName: string; email: string }[];
 }
 
@@ -42,6 +52,7 @@ export async function createTrip(
     lon,
     startDate: input.startDate,
     endDate: input.endDate,
+    transportMode: input.transportMode,
     participants: input.participants.map((p) => ({
       id: nanoid(8),
       firstName: p.firstName,
@@ -55,46 +66,60 @@ export async function createTrip(
 
   await upsertTrip(trip);
 
-  // Auto-discover POI suggestions for this trip's destination, scoped to
-  // this trip only (fire-and-forget-ish, but awaited so the admin panel is
-  // populated as soon as the trip exists).
+  // Genera subito una proposta AI di POI (mai automaticamente inseriti in
+  // itinerario: l'admin la rivede e approva esplicitamente). Best-effort: la
+  // creazione del viaggio non deve mai fallire per un problema col servizio AI.
   try {
-    const allPOIs = await getPOIs();
-    const discovered = await discoverPOIs(lat, lon);
-    const fresh = dedupeAgainstTrip(discovered, allPOIs, trip.id);
-    if (fresh.length > 0) {
-      await savePOIs([...allPOIs, ...toPOIs(fresh, trip.id)]);
-    }
+    await generateAIPOIProposal(trip.id);
   } catch {
-    // POI discovery is best-effort; trip creation must not fail because of it.
+    // niente proposta pronta: l'admin potrà rigenerarla dal Gestionale.
   }
 
   return { tripId: trip.id };
 }
 
-function dedupeAgainstTrip(
-  discovered: Awaited<ReturnType<typeof discoverPOIs>>,
-  allPOIs: Awaited<ReturnType<typeof getPOIs>>,
-  tripId: string
-) {
-  const existingNames = new Set(
-    allPOIs.filter((p) => p.tripId === tripId).map((p) => p.name.toLowerCase())
-  );
-  return discovered.filter((p) => !existingNames.has(p.name.toLowerCase()));
-}
-
-export async function refreshPOIDiscovery(tripId: string): Promise<number> {
+/** Approva (aggiunge al catalogo + assegna a giorno/slot) e/o scarta item della proposta AI pendente. */
+export async function resolveAIPOIProposalItems(
+  tripId: string,
+  approveIds: string[],
+  dismissIds: string[]
+): Promise<Trip> {
   const trips = await getTrips();
   const trip = trips.find((t) => t.id === tripId);
   if (!trip) throw new Error("Trip not found");
 
-  const allPOIs = await getPOIs();
-  const discovered = await discoverPOIs(trip.lat, trip.lon);
-  const fresh = dedupeAgainstTrip(discovered, allPOIs, tripId);
-  if (fresh.length > 0) {
-    await savePOIs([...allPOIs, ...toPOIs(fresh, tripId)]);
+  const proposal = trip.aiPoiProposal ?? [];
+  const toApprove = proposal.filter((item) => approveIds.includes(item.id));
+
+  for (const item of toApprove) {
+    const poi = await findOrCreatePOI({
+      tripId,
+      name: item.name,
+      category: item.category,
+      lat: item.lat,
+      lon: item.lon,
+      description: item.description,
+      validSlots: POI_CATEGORY_DEFAULT_SLOTS[item.category],
+      rating: item.rating,
+      priceLevel: item.priceLevel,
+      placeId: item.placeId,
+    });
+    const day = trip.itinerary[item.dayIndex];
+    if (day && !day[item.slot].includes(poi.id)) day[item.slot].push(poi.id);
   }
-  return fresh.length;
+
+  const resolvedIds = new Set([...approveIds, ...dismissIds]);
+  trip.aiPoiProposal = proposal.filter((item) => !resolvedIds.has(item.id));
+  await upsertTrip(trip);
+  return trip;
+}
+
+export async function regenerateAIPOIProposal(tripId: string, notes?: string): Promise<Trip> {
+  await generateAIPOIProposal(tripId, notes);
+  const trips = await getTrips();
+  const trip = trips.find((t) => t.id === tripId);
+  if (!trip) throw new Error("Trip not found");
+  return trip;
 }
 
 export async function deleteTrip(tripId: string): Promise<void> {

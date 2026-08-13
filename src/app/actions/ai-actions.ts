@@ -1,17 +1,19 @@
 "use server";
 
+import { nanoid } from "nanoid";
 import { getTrips, getSettings, upsertTrip } from "@/lib/db";
 import { geocodePlace } from "@/lib/geocode";
+import { findPlaceByText } from "@/lib/googlePlacesPOI";
 import { tripDayCount } from "@/lib/dates";
-import { POICategory, OSM_SEARCH_CATEGORIES } from "@/lib/types";
-
-export interface ActivitySuggestion {
-  name: string;
-  category: POICategory;
-  description: string;
-  lat: number;
-  lon: number;
-}
+import {
+  POICategory,
+  OSM_SEARCH_CATEGORIES,
+  AIPOIProposalItem,
+  Slot,
+  SLOTS,
+  TRANSPORT_MODE_LABELS,
+  DEFAULT_AI_POI_PROMPT_TEMPLATE,
+} from "@/lib/types";
 
 const ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
 
@@ -51,65 +53,112 @@ async function callClaudeTool<T>(
   return toolUse.input;
 }
 
-export async function suggestActivities(tripId: string): Promise<ActivitySuggestion[]> {
+function buildPrompt(template: string, destination: string, dayCount: number, transportMode: string) {
+  return template
+    .replaceAll("{{destinazione}}", destination)
+    .replaceAll("{{giorni}}", String(dayCount))
+    .replaceAll("{{mezzo}}", transportMode);
+}
+
+/**
+ * Generates a curated basket of AI POI suggestions for a trip, grouped by
+ * day/slot, and stores them as a pending proposal on the trip for the admin
+ * to review and approve/discard — nothing is added to the catalog or
+ * itinerary here.
+ */
+export async function generateAIPOIProposal(
+  tripId: string,
+  extraNotes?: string
+): Promise<AIPOIProposalItem[]> {
   const trips = await getTrips();
   const trip = trips.find((t) => t.id === tripId);
   if (!trip) throw new Error("Viaggio non trovato");
 
   const settings = await getSettings();
   if (!settings.anthropicApiKey) {
-    throw new Error("Configura la chiave Anthropic in Impostazioni per usare i suggerimenti AI.");
+    throw new Error("Configura la chiave Anthropic in Impostazioni per generare la proposta AI.");
   }
 
   const dayCount = tripDayCount(trip.startDate, trip.endDate);
-  const targetCount = Math.min(Math.max(dayCount * 2, 6), 14);
+  const targetCount = Math.min(Math.max(dayCount * 3, 6), 18);
+  const template = settings.aiPoiPromptTemplate || DEFAULT_AI_POI_PROMPT_TEMPLATE;
+  const transportLabel = TRANSPORT_MODE_LABELS[trip.transportMode] ?? "non specificato";
+  let prompt = buildPrompt(template, trip.destination, dayCount, transportLabel);
+  prompt += ` Proponi un piccolo paniere mirato di circa ${targetCount} tappe in totale, senza esagerare — devono poter essere valutate una per una.`;
+  if (extraNotes?.trim()) {
+    prompt += `\n\nSpecifiche aggiuntive di cui tenere conto: ${extraNotes.trim()}`;
+  }
 
-  const { activities: raw } = await callClaudeTool<{
-    activities: { name: string; category: string; description: string }[];
+  const { items: raw } = await callClaudeTool<{
+    items: { name: string; category: string; description: string; dayIndex: number; slot: string }[];
   }>(
     settings.anthropicApiKey,
-    `Suggerisci circa ${targetCount} tra le migliori attività/luoghi da visitare a "${trip.destination}" per un viaggio di ${dayCount} giorni. Dai priorità in base al tipo di destinazione: se è una meta balneare/isola privilegia spiagge, punti panoramici e ristoranti; se è una città d'arte privilegia monumenti, musei, chiese e ristoranti; adatta il mix in autonomia in base al luogo reale. Usa nomi propri reali e riconoscibili (non generici), adatti a essere cercati su una mappa.`,
-    "propose_activities",
-    "Restituisce l'elenco di attività/luoghi suggeriti per il viaggio.",
+    prompt,
+    "propose_itinerary",
+    "Restituisce l'elenco di tappe proposte per il viaggio, raggruppate per giorno e slot.",
     {
       type: "object",
       properties: {
-        activities: {
+        items: {
           type: "array",
           items: {
             type: "object",
             properties: {
-              name: { type: "string", description: "Nome proprio reale del luogo, cercabile su una mappa" },
+              name: { type: "string", description: "Nome proprio reale del luogo, cercabile su Google Maps" },
               category: { type: "string", enum: OSM_SEARCH_CATEGORIES },
               description: { type: "string", description: "Massimo una frase, perché è consigliato" },
+              dayIndex: { type: "integer", description: `Giorno del viaggio, da 1 a ${dayCount}` },
+              slot: { type: "string", enum: SLOTS },
             },
-            required: ["name", "category", "description"],
+            required: ["name", "category", "description", "dayIndex", "slot"],
           },
         },
       },
-      required: ["activities"],
+      required: ["items"],
     }
   );
 
-  const geocoded = await Promise.all(
-    (raw ?? []).map(async (a) => {
-      const place = await geocodePlace(`${a.name}, ${trip.destination}`);
-      if (!place) return null;
-      const category = OSM_SEARCH_CATEGORIES.includes(a.category as POICategory)
-        ? (a.category as POICategory)
+  const resolved = await Promise.all(
+    (raw ?? []).map(async (item) => {
+      const category = OSM_SEARCH_CATEGORIES.includes(item.category as POICategory)
+        ? (item.category as POICategory)
         : "altro";
-      const suggestion: ActivitySuggestion = {
-        name: a.name,
+      const slot = SLOTS.includes(item.slot as Slot) ? (item.slot as Slot) : "pomeriggio";
+      const dayIndex = Math.min(Math.max(Math.round(item.dayIndex) - 1, 0), trip.itinerary.length - 1);
+
+      let place: { lat: number; lon: number; placeId?: string; rating?: number; priceLevel?: number } | null =
+        null;
+      if (settings.poiProvider === "google" && settings.googleApiKey) {
+        const found = await findPlaceByText(`${item.name}, ${trip.destination}`, settings.googleApiKey);
+        if (found) place = found;
+      }
+      if (!place) {
+        const geocoded = await geocodePlace(`${item.name}, ${trip.destination}`);
+        if (geocoded) place = geocoded;
+      }
+      if (!place) return null;
+
+      const proposal: AIPOIProposalItem = {
+        id: nanoid(10),
+        name: item.name,
         category,
-        description: a.description,
+        description: item.description,
+        dayIndex,
+        slot,
         lat: place.lat,
         lon: place.lon,
+        placeId: place.placeId,
+        rating: place.rating,
+        priceLevel: place.priceLevel,
       };
-      return suggestion;
+      return proposal;
     })
   );
 
-  return geocoded.filter((s): s is ActivitySuggestion => s !== null);
+  const proposal = resolved.filter((p): p is AIPOIProposalItem => p !== null);
+  trip.aiPoiProposal = proposal;
+  await upsertTrip(trip);
+  return proposal;
 }
 
 /**

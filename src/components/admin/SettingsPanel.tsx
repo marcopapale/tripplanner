@@ -2,21 +2,15 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { AppSettings, POIProvider, POI_PROVIDER_LABELS } from "@/lib/types";
-import {
-  updateAppSettings,
-  testFoursquareKey,
-  testGoogleKey,
-} from "@/app/actions/settings-actions";
+import { AppSettings, POIProvider, POI_PROVIDER_LABELS, DEFAULT_AI_POI_PROMPT_TEMPLATE } from "@/lib/types";
+import { updateAppSettings, testGoogleKey } from "@/app/actions/settings-actions";
 import { Card, Input, Label } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 
-const PROVIDERS: POIProvider[] = ["osm", "foursquare", "google"];
+const PROVIDERS: POIProvider[] = ["osm", "google"];
 
 const PROVIDER_DESCRIPTIONS: Record<POIProvider, string> = {
   osm: "Gratuito, nessuna chiave richiesta. Nessun rating o fascia di prezzo.",
-  foursquare:
-    "Ricerca base gratuita, ma rating e prezzo sono un dato \"Premium\" a pagamento (senza credito gratuito).",
   google:
     "Rating e prezzo inclusi in un piano con 1.000 chiamate gratuite/mese + credito di prova. Richiede account Google Cloud con fatturazione.",
 };
@@ -84,12 +78,14 @@ function TestResultCard({ result, provider }: { result: TestResult; provider: PO
 
 export function SettingsPanel({ initialSettings }: { initialSettings: AppSettings }) {
   const [poiProvider, setPoiProvider] = useState<POIProvider>(initialSettings.poiProvider);
-  const [foursquareApiKey, setFoursquareApiKey] = useState(initialSettings.foursquareApiKey ?? "");
   const [googleApiKey, setGoogleApiKey] = useState(initialSettings.googleApiKey ?? "");
   const [googleMapsBrowserKey, setGoogleMapsBrowserKey] = useState(
     initialSettings.googleMapsBrowserKey ?? ""
   );
   const [anthropicApiKey, setAnthropicApiKey] = useState(initialSettings.anthropicApiKey ?? "");
+  const [aiPoiPromptTemplate, setAiPoiPromptTemplate] = useState(
+    initialSettings.aiPoiPromptTemplate || DEFAULT_AI_POI_PROMPT_TEMPLATE
+  );
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -100,23 +96,20 @@ export function SettingsPanel({ initialSettings }: { initialSettings: AppSetting
     setSaving(true);
     await updateAppSettings({
       poiProvider,
-      foursquareApiKey,
       googleApiKey,
       googleMapsBrowserKey,
       anthropicApiKey,
+      aiPoiPromptTemplate,
     });
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 1800);
   }
 
-  async function handleTest(provider: "foursquare" | "google") {
+  async function handleTest() {
     setTesting(true);
     setTestResult(null);
-    const res =
-      provider === "foursquare"
-        ? await testFoursquareKey(foursquareApiKey)
-        : await testGoogleKey(googleApiKey);
+    const res = await testGoogleKey(googleApiKey);
     setTestResult(parseTestResult(res));
     setTesting(false);
   }
@@ -139,7 +132,7 @@ export function SettingsPanel({ initialSettings }: { initialSettings: AppSetting
             <p className="text-xs text-gray-500 mb-3">
               Determina da dove vengono cercati i punti di interesse nella mappa del Gestionale.
             </p>
-            <div className="grid sm:grid-cols-3 gap-3">
+            <div className="grid sm:grid-cols-2 gap-3">
               {PROVIDERS.map((p) => (
                 <button
                   key={p}
@@ -158,30 +151,6 @@ export function SettingsPanel({ initialSettings }: { initialSettings: AppSetting
             </div>
           </div>
 
-          {poiProvider === "foursquare" && (
-            <div>
-              <Label>Foursquare API Key</Label>
-              <Input
-                type="password"
-                placeholder="Incolla qui la tua API key"
-                value={foursquareApiKey}
-                onChange={(e) => setFoursquareApiKey(e.target.value)}
-              />
-              <p className="text-xs text-gray-400 mt-1">
-                La trovi nel tuo account Foursquare Developer, sezione "API Keys" del progetto.
-              </p>
-              <button
-                type="button"
-                onClick={() => handleTest("foursquare")}
-                disabled={testing || !foursquareApiKey}
-                className="mt-2 text-xs font-semibold text-lagoon-dark bg-lagoon/10 hover:bg-lagoon/20 rounded-full px-3 py-1.5 disabled:opacity-50"
-              >
-                {testing ? "Test in corso…" : "🔍 Testa connessione (ristoranti a Roma)"}
-              </button>
-              {testResult && <TestResultCard result={testResult} provider="foursquare" />}
-            </div>
-          )}
-
           {poiProvider === "google" && (
             <div>
               <Label>Google Places API Key</Label>
@@ -196,7 +165,7 @@ export function SettingsPanel({ initialSettings }: { initialSettings: AppSetting
               </p>
               <button
                 type="button"
-                onClick={() => handleTest("google")}
+                onClick={handleTest}
                 disabled={testing || !googleApiKey}
                 className="mt-2 text-xs font-semibold text-lagoon-dark bg-lagoon/10 hover:bg-lagoon/20 rounded-full px-3 py-1.5 disabled:opacity-50"
               >
@@ -228,10 +197,11 @@ export function SettingsPanel({ initialSettings }: { initialSettings: AppSetting
 
         <Card className="p-6 space-y-4">
           <div>
-            <h2 className="text-sm font-bold text-gray-700 mb-1">AI — Suggerimenti attività</h2>
+            <h2 className="text-sm font-bold text-gray-700 mb-1">AI — Proposta itinerario POI</h2>
             <p className="text-xs text-gray-500 mb-3">
-              Usa Claude per suggerire le attività principali da fare nella destinazione, in base
-              alla durata del viaggio. Opzionale.
+              Usa Claude per proporre, alla creazione di ogni viaggio, un piccolo paniere di POI
+              raggruppati per giorno e fascia oraria, in base a destinazione, durata e mezzo di
+              trasporto. L'admin rivede sempre la proposta prima che qualcosa venga aggiunto.
             </p>
             <Label>Anthropic API Key</Label>
             <Input
@@ -240,6 +210,21 @@ export function SettingsPanel({ initialSettings }: { initialSettings: AppSetting
               value={anthropicApiKey}
               onChange={(e) => setAnthropicApiKey(e.target.value)}
             />
+          </div>
+          <div>
+            <Label>Prompt utilizzato per generare la proposta</Label>
+            <textarea
+              value={aiPoiPromptTemplate}
+              onChange={(e) => setAiPoiPromptTemplate(e.target.value)}
+              rows={6}
+              className="w-full rounded-2xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-lagoon focus:ring-2 focus:ring-lagoon/20 transition bg-white font-mono"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Placeholder disponibili: <code>{"{{destinazione}}"}</code>,{" "}
+              <code>{"{{giorni}}"}</code>, <code>{"{{mezzo}}"}</code> (mezzo di trasporto scelto in
+              fase di creazione del viaggio). Quando si rigenera una proposta dal Gestionale
+              aggiungendo note libere, queste vengono accodate automaticamente al prompt.
+            </p>
           </div>
         </Card>
 

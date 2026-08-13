@@ -1,5 +1,4 @@
 import { POI, POICategory, POI_CATEGORY_DEFAULT_SLOTS } from "./types";
-import { nanoid } from "nanoid";
 
 /**
  * OpenStreetMap-backed POI discovery: queries Overpass for real places
@@ -85,22 +84,6 @@ function elementsToPOIs(elements: OverpassElement[], limit: number): DiscoveredP
   return results;
 }
 
-export async function discoverPOIs(lat: number, lon: number): Promise<DiscoveredPOI[]> {
-  const query = `
-    [out:json][timeout:20];
-    (
-      node["tourism"~"attraction|museum|gallery|viewpoint"](around:6000,${lat},${lon});
-      node["natural"="beach"](around:8000,${lat},${lon});
-      node["leisure"~"beach_resort|park"](around:8000,${lat},${lon});
-      node["amenity"~"restaurant|cafe|bar|pub|nightclub|place_of_worship"](around:4000,${lat},${lon});
-      node["historic"](around:6000,${lat},${lon});
-    );
-    out body 50;
-  `;
-  const elements = await queryOverpass(query);
-  return elementsToPOIs(elements, 30);
-}
-
 // Overpass tag selectors used when searching a specific map area by category.
 const CATEGORY_OSM_SELECTORS: Partial<Record<POICategory, string[]>> = {
   monumento: [
@@ -143,8 +126,4 @@ export async function searchPOIsInBounds(
   const query = `[out:json][timeout:20];(${clauses});out body 80;`;
   const elements = await queryOverpass(query);
   return elementsToPOIs(elements, 80);
-}
-
-export function toPOIs(discovered: DiscoveredPOI[], tripId: string): POI[] {
-  return discovered.map((d) => ({ ...d, id: nanoid(10), tripId }));
 }

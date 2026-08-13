@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createTrip } from "@/app/actions/trip-actions";
+import { TransportMode, TRANSPORT_MODE_LABELS } from "@/lib/types";
 import { Card, Input, Label } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { CreatingTripOverlay } from "@/components/CreatingTripOverlay";
@@ -22,6 +23,7 @@ export function TripForm() {
   const [destination, setDestination] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [transportMode, setTransportMode] = useState<TransportMode>("auto");
   const [participants, setParticipants] = useState<ParticipantRow[]>([emptyParticipant()]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +61,13 @@ export function TripForm() {
     }
     setLoading(true);
     try {
-      const { tripId } = await createTrip({ destination, startDate, endDate, participants });
+      const { tripId } = await createTrip({
+        destination,
+        startDate,
+        endDate,
+        transportMode,
+        participants,
+      });
       router.push(`/viaggio-creato/${tripId}`);
     } catch (err) {
       setError(
@@ -103,6 +111,20 @@ export function TripForm() {
               required
             />
           </div>
+        </div>
+        <div>
+          <Label>Mezzo di trasporto</Label>
+          <select
+            value={transportMode}
+            onChange={(e) => setTransportMode(e.target.value as TransportMode)}
+            className="w-full rounded-2xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-lagoon focus:ring-2 focus:ring-lagoon/20 transition bg-white"
+          >
+            {Object.entries(TRANSPORT_MODE_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <Label>Numero partecipanti</Label>

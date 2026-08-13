@@ -3,14 +3,14 @@ import { MapBounds, DiscoveredPOI } from "./poiDiscovery";
 import { boundsToCenterRadius } from "./mapMath";
 
 /**
- * Google Places API (New) — Nearby Search. Chosen as an alternative to
- * Foursquare because rating/price are included in a tier with a real free
- * monthly allowance (1,000 calls/month on the Enterprise+Atmosphere SKU,
- * plus a $300 trial credit for new accounts), unlike Foursquare's Premium
- * fields which have no free allowance at all.
+ * Google Places API (New) — Nearby Search + Text Search. Rating/price are
+ * included in a tier with a real free monthly allowance (1,000 calls/month
+ * on the Enterprise+Atmosphere SKU, plus a $300 trial credit for new
+ * accounts).
  */
 
 const SEARCH_URL = "https://places.googleapis.com/v1/places:searchNearby";
+const TEXT_SEARCH_URL = "https://places.googleapis.com/v1/places:searchText";
 const FIELD_MASK =
   "places.id,places.displayName,places.location,places.rating,places.priceLevel,places.formattedAddress";
 
@@ -86,6 +86,47 @@ async function searchByType(
       }));
   } catch {
     return [];
+  }
+}
+
+export interface TextSearchResult {
+  name: string;
+  lat: number;
+  lon: number;
+  placeId: string;
+  rating?: number;
+  priceLevel?: number;
+}
+
+/** Resolves a free-text place name (e.g. an AI suggestion) to a real Google Place. */
+export async function findPlaceByText(
+  query: string,
+  apiKey: string
+): Promise<TextSearchResult | null> {
+  try {
+    const res = await fetch(TEXT_SEARCH_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": FIELD_MASK,
+      },
+      body: JSON.stringify({ textQuery: query, maxResultCount: 1 }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const place: GooglePlace | undefined = Array.isArray(data.places) ? data.places[0] : undefined;
+    if (!place?.id || !place.displayName?.text || place.location?.latitude == null) return null;
+    return {
+      name: place.displayName.text,
+      lat: place.location.latitude,
+      lon: place.location.longitude!,
+      placeId: place.id,
+      rating: place.rating,
+      priceLevel: place.priceLevel ? PRICE_LEVEL_MAP[place.priceLevel] : undefined,
+    };
+  } catch {
+    return null;
   }
 }
 

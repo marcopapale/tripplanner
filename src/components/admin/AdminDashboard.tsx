@@ -14,14 +14,14 @@ import {
   SLOT_LABELS,
   Slot,
 } from "@/lib/types";
-import { assignPOI, unassignPOI, refreshPOIDiscovery } from "@/app/actions/trip-actions";
+import { assignPOI, unassignPOI } from "@/app/actions/trip-actions";
 import { addPOI, deletePOI, listAllPOIs, findOrCreatePOI } from "@/app/actions/poi-actions";
 import { adminLogout } from "@/app/actions/admin-actions";
 import { formatDateRange, formatDayLabel } from "@/lib/dates";
 import { Card, Input, Label } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { TripDetailsPanel } from "@/components/admin/TripDetailsPanel";
-import { AISuggestionsPanel } from "@/components/admin/AISuggestionsPanel";
+import { AIPOIProposalReview } from "@/components/admin/AIPOIProposalReview";
 
 const POIMapSearch = dynamic(
   () => import("@/components/admin/POIMapSearch").then((m) => m.POIMapSearch),
@@ -53,8 +53,6 @@ export function AdminDashboard({
   );
   const [selectedDay, setSelectedDay] = useState(0);
   const [showAddPOI, setShowAddPOI] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [refreshMsg, setRefreshMsg] = useState<string | null>(null);
   const [origin, setOrigin] = useState("");
 
   useEffect(() => {
@@ -124,6 +122,12 @@ export function AdminDashboard({
 
   function handleTripUpdated(updated: Trip) {
     setTrips((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+  }
+
+  async function handleAIProposalUpdated(updated: Trip) {
+    handleTripUpdated(updated);
+    // L'approvazione può aver creato nuovi POI lato server: risincronizza il catalogo locale.
+    setPois(await listAllPOIs());
   }
 
   function handleTripDeleted(tripId: string) {
@@ -307,31 +311,9 @@ export function AdminDashboard({
                         Catalogo di questo viaggio ({tripPOIs.length}) e strumenti avanzati
                       </summary>
                       <div className="mt-3 space-y-3">
-                        <button
-                          disabled={refreshing}
-                          onClick={async () => {
-                            setRefreshing(true);
-                            setRefreshMsg(null);
-                            const added = await refreshPOIDiscovery(selectedTrip.id);
-                            setPois(await listAllPOIs());
-                            setRefreshMsg(
-                              added > 0 ? `+${added} nuovi POI suggeriti` : "Nessun nuovo POI trovato"
-                            );
-                            setRefreshing(false);
-                          }}
-                          className="w-full text-xs font-semibold text-lagoon-dark bg-lagoon/10 hover:bg-lagoon/20 rounded-full px-3 py-2 disabled:opacity-50"
-                        >
-                          {refreshing
-                            ? "Ricerca in corso…"
-                            : "🔎 Suggerisci POI intorno alla destinazione"}
-                        </button>
-                        {refreshMsg && (
-                          <p className="text-xs text-gray-400 text-center">{refreshMsg}</p>
-                        )}
-
-                        <AISuggestionsPanel
-                          tripId={selectedTrip.id}
-                          onAdded={(poi) => setPois((prev) => [...prev, poi])}
+                        <AIPOIProposalReview
+                          trip={selectedTrip}
+                          onTripUpdated={handleAIProposalUpdated}
                         />
 
                         <button
