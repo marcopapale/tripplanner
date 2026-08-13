@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { AppSettings, POIProvider, POI_PROVIDER_LABELS } from "@/lib/types";
-import { updateAppSettings } from "@/app/actions/settings-actions";
+import { updateAppSettings, testFoursquareKey } from "@/app/actions/settings-actions";
 import { Card, Input, Label } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 
@@ -16,12 +16,32 @@ export function SettingsPanel({ initialSettings }: { initialSettings: AppSetting
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{
+    ok: boolean;
+    status: number;
+    places: { name: string; rating?: number; price?: number }[];
+  } | null>(null);
+
   async function handleSave() {
     setSaving(true);
     await updateAppSettings({ poiProvider, foursquareApiKey, anthropicApiKey });
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 1800);
+  }
+
+  async function handleTest() {
+    setTesting(true);
+    setTestResult(null);
+    const res = await testFoursquareKey(foursquareApiKey);
+    const sample = res.sample as { results?: { name: string; rating?: number; price?: number }[] };
+    setTestResult({
+      ok: res.ok,
+      status: res.status,
+      places: sample.results ?? [],
+    });
+    setTesting(false);
   }
 
   return (
@@ -77,6 +97,43 @@ export function SettingsPanel({ initialSettings }: { initialSettings: AppSetting
               <p className="text-xs text-gray-400 mt-1">
                 La trovi nel tuo account Foursquare Developer, sezione "API Keys" del progetto.
               </p>
+
+              <button
+                type="button"
+                onClick={handleTest}
+                disabled={testing || !foursquareApiKey}
+                className="mt-2 text-xs font-semibold text-lagoon-dark bg-lagoon/10 hover:bg-lagoon/20 rounded-full px-3 py-1.5 disabled:opacity-50"
+              >
+                {testing ? "Test in corso…" : "🔍 Testa connessione (ristoranti a Roma)"}
+              </button>
+
+              {testResult && (
+                <div className="mt-2 rounded-xl bg-gray-50 p-3 text-xs space-y-1">
+                  <p className="font-semibold">
+                    {testResult.ok ? `HTTP ${testResult.status} ✓` : `Errore HTTP ${testResult.status}`}
+                  </p>
+                  {testResult.places.length === 0 ? (
+                    <p className="text-gray-500">Nessun risultato restituito.</p>
+                  ) : (
+                    <>
+                      <ul className="space-y-0.5">
+                        {testResult.places.map((p, i) => (
+                          <li key={i} className="text-gray-600">
+                            {p.name} — rating: {p.rating ?? "assente"} · price:{" "}
+                            {p.price ?? "assente"}
+                          </li>
+                        ))}
+                      </ul>
+                      {testResult.places.every((p) => p.rating == null && p.price == null) && (
+                        <p className="text-gray-400 mt-1">
+                          Rating e prezzo non sono presenti nella risposta: probabilmente il tuo
+                          piano Foursquare non include questi campi (sono dati "Premium").
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </Card>

@@ -7,6 +7,8 @@ import {
   Trip,
   POI,
   POICategory,
+  POIProvider,
+  POI_PROVIDER_LABELS,
   POI_CATEGORY_LABELS,
   POI_CATEGORY_DEFAULT_SLOTS,
   OSM_SEARCH_CATEGORIES,
@@ -143,12 +145,14 @@ export function POIMapSearch({
   trip,
   catalogPOIs,
   selectedDay,
+  poiProvider,
   onAssignExisting,
   onAddAndAssign,
 }: {
   trip: Trip;
   catalogPOIs: POI[];
   selectedDay: number;
+  poiProvider: POIProvider;
   onAssignExisting: (poi: POI, dayIndex: number, slots: Slot[]) => Promise<void>;
   onAddAndAssign: (
     result: Omit<POI, "id" | "tripId">,
@@ -207,6 +211,26 @@ export function POIMapSearch({
 
   return (
     <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <span
+          className="inline-flex items-center gap-1.5 text-[11px] font-semibold rounded-full px-2.5 py-1"
+          style={
+            poiProvider === "foursquare"
+              ? { background: "#F0407733", color: "#F04077" }
+              : { background: "#eef7f9", color: "#0d9488" }
+          }
+        >
+          <span
+            className="h-1.5 w-1.5 rounded-full"
+            style={{ background: poiProvider === "foursquare" ? "#F04077" : "#0d9488" }}
+          />
+          Provider: {POI_PROVIDER_LABELS[poiProvider]}
+        </span>
+        <a href="/admin/settings" className="text-[11px] text-gray-400 hover:text-gray-600">
+          Cambia →
+        </a>
+      </div>
+
       <div className="flex flex-wrap gap-1.5">
         {OSM_SEARCH_CATEGORIES.map((c) => (
           <button

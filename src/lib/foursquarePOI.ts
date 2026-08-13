@@ -88,6 +88,24 @@ async function searchByQuery(
   }
 }
 
+/** Raw diagnostic call used by the settings page to verify what the API key actually returns. */
+export async function testFoursquareConnection(
+  apiKey: string
+): Promise<{ ok: boolean; status: number; sample: unknown }> {
+  const url = new URL(FSQ_SEARCH_URL);
+  url.searchParams.set("ll", "41.9028,12.4964"); // Roma, as a known reference point
+  url.searchParams.set("radius", "3000");
+  url.searchParams.set("query", "restaurant");
+  url.searchParams.set("limit", "3");
+  url.searchParams.set("fields", "name,geocodes,categories,location,rating,price");
+
+  const res = await fetch(url.toString(), {
+    headers: { Authorization: apiKey, Accept: "application/json" },
+  });
+  const body = await res.json().catch(() => ({}));
+  return { ok: res.ok, status: res.status, sample: body };
+}
+
 export async function searchFoursquarePOIsInBounds(
   bounds: MapBounds,
   categories: POICategory[],

@@ -7,6 +7,7 @@ import {
   Trip,
   POI,
   POICategory,
+  POIProvider,
   POI_CATEGORY_LABELS,
   POI_CATEGORY_DEFAULT_SLOTS,
   SLOTS,
@@ -37,9 +38,11 @@ const POIMapSearch = dynamic(
 export function AdminDashboard({
   initialTrips,
   initialPOIs,
+  poiProvider,
 }: {
   initialTrips: Trip[];
   initialPOIs: POI[];
+  poiProvider: POIProvider;
 }) {
   const [trips, setTrips] = useState(initialTrips);
   const [pois, setPois] = useState(initialPOIs);
@@ -243,6 +246,7 @@ export function AdminDashboard({
                       trip={selectedTrip}
                       catalogPOIs={tripPOIs}
                       selectedDay={selectedDay}
+                      poiProvider={poiProvider}
                       onAssignExisting={handleAssignExisting}
                       onAddAndAssign={handleAddAndAssign}
                     />

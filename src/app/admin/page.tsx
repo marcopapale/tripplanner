@@ -1,4 +1,4 @@
-import { getTrips } from "@/lib/db";
+import { getTrips, getSettings } from "@/lib/db";
 import { listAllPOIs } from "@/app/actions/poi-actions";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
 
@@ -8,6 +8,8 @@ import { AdminDashboard } from "@/components/admin/AdminDashboard";
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  const [trips, pois] = await Promise.all([getTrips(), listAllPOIs()]);
-  return <AdminDashboard initialTrips={trips} initialPOIs={pois} />;
+  const [trips, pois, settings] = await Promise.all([getTrips(), listAllPOIs(), getSettings()]);
+  return (
+    <AdminDashboard initialTrips={trips} initialPOIs={pois} poiProvider={settings.poiProvider} />
+  );
 }
