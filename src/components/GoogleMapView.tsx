@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { loadGoogleMapsLibraries } from "@/lib/googleMapsLoader";
 import { PlaceDetailsCard } from "@/components/PlaceDetailsCard";
 import { POI, SLOT_LABELS, Slot } from "@/lib/types";
+import { CATEGORY_COLOR, CATEGORY_EMOJI } from "@/lib/mapIcons";
 
 interface MapMarker {
   poi: POI;
@@ -97,17 +98,22 @@ export function GoogleMapView({
 
     const bounds = new g.maps.LatLngBounds();
     for (const entry of markers) {
-      const pin = new g.maps.marker.PinElement({});
+      const el = document.createElement("div");
+      el.style.cssText =
+        `width:28px;height:28px;border-radius:9999px;display:flex;align-items:center;` +
+        `justify-content:center;font-size:14px;border:2px solid white;` +
+        `box-shadow:0 2px 6px rgba(0,0,0,.25);background:${CATEGORY_COLOR[entry.poi.category]}`;
+      el.textContent = CATEGORY_EMOJI[entry.poi.category];
       const marker = new g.maps.marker.AdvancedMarkerElement({
         map,
         position: { lat: entry.poi.lat, lng: entry.poi.lon },
         title: entry.poi.name,
-        content: pin.element,
+        content: el,
       });
       // gmp-click di Google è inaffidabile (la mappa cattura il puntatore per
-      // il pan prima che si completi): usiamo il click nativo sul pin.
-      pin.element.addEventListener("click", () => {
-        anchorToMarker(pin.element);
+      // il pan prima che si completi): usiamo il click nativo sul marker.
+      el.addEventListener("click", () => {
+        anchorToMarker(el);
         setSelected(entry);
       });
       markerObjsRef.current.push(marker);
