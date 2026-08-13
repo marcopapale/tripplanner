@@ -281,7 +281,7 @@ export function POIMapSearch({
     if (!mapReady || !g || !map) return;
 
     // DIAGNOSTICA TEMPORANEA — rimuovere dopo aver isolato il bug dei click.
-    console.debug(
+    console.log(
       `[map-debug] rebuild marker effect: catalog=${catalogPOIs.length} results=${visibleResults.length}`
     );
 
@@ -302,11 +302,11 @@ export function POIMapSearch({
         content: el,
       });
       marker.addEventListener("gmp-click", () => {
-        console.debug(`[map-debug] gmp-click catalog: ${poi.name}`);
+        console.log(`[map-debug] gmp-click catalog: ${poi.name}`);
         setSelected({ kind: "catalog", poi });
       });
       el.addEventListener("pointerdown", () =>
-        console.debug(`[map-debug] pointerdown on catalog marker: ${poi.name}`)
+        console.log(`[map-debug] pointerdown on catalog marker: ${poi.name}`)
       );
       markerObjsRef.current.push(marker);
     }
@@ -325,11 +325,11 @@ export function POIMapSearch({
         content: el,
       });
       marker.addEventListener("gmp-click", () => {
-        console.debug(`[map-debug] gmp-click result: ${r.name}`);
+        console.log(`[map-debug] gmp-click result: ${r.name}`);
         setSelected({ kind: "result", result: r });
       });
       el.addEventListener("pointerdown", () =>
-        console.debug(`[map-debug] pointerdown on result marker: ${r.name}`)
+        console.log(`[map-debug] pointerdown on result marker: ${r.name}`)
       );
       markerObjsRef.current.push(marker);
     }
