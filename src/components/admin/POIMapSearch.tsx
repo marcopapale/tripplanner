@@ -384,7 +384,7 @@ export function POIMapSearch({
               </div>
             )}
             {selected && (
-              <div className="absolute inset-x-2 bottom-2 z-10 max-h-[75%] overflow-y-auto rounded-2xl bg-white shadow-lg border border-gray-100 p-3">
+              <div className="absolute left-2 bottom-2 z-10 w-[min(320px,90%)] max-h-[85%] overflow-y-auto rounded-2xl bg-white shadow-lg border border-gray-100 p-3">
                 <button
                   onClick={() => setSelected(null)}
                   className="float-right text-gray-400 hover:text-gray-600 text-sm"
