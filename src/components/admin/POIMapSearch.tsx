@@ -247,6 +247,7 @@ export function POIMapSearch({
           gestureHandling: "cooperative",
           streetViewControl: false,
           fullscreenControl: false,
+          clickableIcons: false,
         });
         mapRef.current = map;
         const updateBounds = () => {

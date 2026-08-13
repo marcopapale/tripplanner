@@ -44,6 +44,7 @@ export function GoogleMapView({
           gestureHandling: "cooperative",
           streetViewControl: false,
           fullscreenControl: false,
+          clickableIcons: false,
         });
         setReady(true);
       })
