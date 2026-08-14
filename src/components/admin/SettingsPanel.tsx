@@ -87,7 +87,7 @@ function ImageUploadField({
   label: string;
   value: string;
   onChange: (url: string) => void;
-  field: "hero" | "logo";
+  field: "hero" | "heroMobile" | "logo";
   hint?: string;
 }) {
   const [uploading, setUploading] = useState(false);
@@ -170,6 +170,9 @@ export function SettingsPanel({ initialSettings }: { initialSettings: AppSetting
   const [landingHeroImageUrl, setLandingHeroImageUrl] = useState(
     initialSettings.landingHeroImageUrl ?? ""
   );
+  const [landingHeroImageMobileUrl, setLandingHeroImageMobileUrl] = useState(
+    initialSettings.landingHeroImageMobileUrl ?? ""
+  );
   const [landingLogoUrl, setLandingLogoUrl] = useState(initialSettings.landingLogoUrl ?? "");
   const [landingPayoffText, setLandingPayoffText] = useState(
     initialSettings.landingPayoffText ?? ""
@@ -192,6 +195,7 @@ export function SettingsPanel({ initialSettings }: { initialSettings: AppSetting
       googleMapsBrowserKey,
       customMapId,
       landingHeroImageUrl,
+      landingHeroImageMobileUrl,
       landingLogoUrl,
       landingPayoffText,
       anthropicApiKey,
@@ -282,11 +286,19 @@ export function SettingsPanel({ initialSettings }: { initialSettings: AppSetting
           </div>
 
           <ImageUploadField
-            label="Immagine di sfondo"
+            label="Immagine di sfondo (desktop)"
             value={landingHeroImageUrl}
             onChange={setLandingHeroImageUrl}
             field="hero"
             hint="Mostrata a schermo intero con un leggero effetto Ken Burns. Se vuota, viene usato un gradiente del brand."
+          />
+
+          <ImageUploadField
+            label="Immagine di sfondo (mobile)"
+            value={landingHeroImageMobileUrl}
+            onChange={setLandingHeroImageMobileUrl}
+            field="heroMobile"
+            hint="Usata sotto ai 768px di larghezza, idealmente in verticale. Se vuota, viene usata l'immagine desktop."
           />
 
           <ImageUploadField

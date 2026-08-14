@@ -6,13 +6,17 @@ import Link from "next/link";
 import { checkTripAccessCode } from "@/app/actions/trip-actions";
 
 const DEFAULT_PAYOFF = "Organizza il prossimo viaggio di gruppo";
+const DEFAULT_HERO_DESKTOP = "/branding/hero-desktop.jpg";
+const DEFAULT_HERO_MOBILE = "/branding/hero-mobile.jpg";
 
 export function LandingHero({
   heroImageUrl,
+  heroImageMobileUrl,
   logoUrl,
   payoffText,
 }: {
   heroImageUrl?: string;
+  heroImageMobileUrl?: string;
   logoUrl?: string;
   payoffText?: string;
 }) {
@@ -36,16 +40,23 @@ export function LandingHero({
     setChecking(false);
   }
 
+  const desktopSrc = heroImageUrl || DEFAULT_HERO_DESKTOP;
+  const mobileSrc = heroImageMobileUrl || heroImageUrl || DEFAULT_HERO_MOBILE;
+
   return (
     <main className="relative flex-1 min-h-screen overflow-hidden bg-gradient-to-br from-sunset to-lagoon">
-      {heroImageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={heroImageUrl}
-          alt=""
-          className="absolute inset-0 h-full w-full object-cover animate-ken-burns"
-        />
-      ) : null}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={mobileSrc}
+        alt=""
+        className="absolute inset-0 h-full w-full object-cover animate-ken-burns md:hidden"
+      />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={desktopSrc}
+        alt=""
+        className="absolute inset-0 h-full w-full object-cover animate-ken-burns hidden md:block"
+      />
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/35 to-black/70" />
 
       <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-4 text-center text-white">

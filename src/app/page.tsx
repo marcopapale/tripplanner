@@ -8,6 +8,7 @@ export default async function Home() {
   return (
     <LandingHero
       heroImageUrl={settings.landingHeroImageUrl}
+      heroImageMobileUrl={settings.landingHeroImageMobileUrl}
       logoUrl={settings.landingLogoUrl}
       payoffText={settings.landingPayoffText}
     />
