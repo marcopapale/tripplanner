@@ -2,21 +2,48 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { upload } from "@vercel/blob/client";
-import { nanoid } from "nanoid";
 import { AppSettings, POIProvider, POI_PROVIDER_LABELS, DEFAULT_AI_POI_PROMPT_TEMPLATE } from "@/lib/types";
 import { updateAppSettings, testGoogleKey } from "@/app/actions/settings-actions";
 import { uploadBrandingImage } from "@/app/actions/branding-actions";
 import { Card, Input, Label } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 
-const EXT_BY_MIME: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-  "image/gif": "gif",
-  "image/svg+xml": "svg",
-};
+const COMPRESS_SKIP_BELOW_BYTES = 500 * 1024;
+
+/**
+ * Ridimensiona/comprime nel browser prima dell'upload: le foto originali
+ * (soprattutto da smartphone) possono superare facilmente i 4.5MB, limite
+ * fisso di Vercel sul body delle funzioni serverless che non è aggirabile
+ * lato configurazione. Comprimere qui garantisce di restare sempre ben
+ * sotto quella soglia, indipendentemente dal peso del file originale.
+ */
+async function compressImage(
+  file: File,
+  maxDimension: number,
+  format: "image/jpeg" | "image/png",
+  quality: number
+): Promise<File> {
+  if (file.type === "image/svg+xml" || file.size < COMPRESS_SKIP_BELOW_BYTES) return file;
+
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
+  const width = Math.round(bitmap.width * scale);
+  const height = Math.round(bitmap.height * scale);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return file;
+  ctx.drawImage(bitmap, 0, 0, width, height);
+
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, format, quality));
+  if (!blob) return file;
+
+  const ext = format === "image/png" ? "png" : "jpg";
+  const baseName = file.name.replace(/\.[^.]+$/, "");
+  return new File([blob], `${baseName}.${ext}`, { type: format });
+}
 
 const PROVIDERS: POIProvider[] = ["osm", "google"];
 
@@ -93,14 +120,12 @@ function ImageUploadField({
   onChange,
   field,
   hint,
-  useBlob,
 }: {
   label: string;
   value: string;
   onChange: (url: string) => void;
   field: "hero" | "heroMobile" | "logo";
   hint?: string;
-  useBlob: boolean;
 }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -112,21 +137,16 @@ function ImageUploadField({
     setUploading(true);
     setError(null);
     try {
-      let url: string;
-      if (useBlob) {
-        // Upload diretto al bucket Vercel Blob dal browser: aggira il
-        // limite di 4.5MB sul body delle funzioni serverless.
-        const ext = EXT_BY_MIME[file.type] ?? "jpg";
-        const blob = await upload(`uploads/${field}-${nanoid(10)}.${ext}`, file, {
-          access: "public",
-          handleUploadUrl: "/api/branding-upload",
-        });
-        url = blob.url;
-      } else {
-        const formData = new FormData();
-        formData.append("file", file);
-        url = await uploadBrandingImage(formData, field);
-      }
+      const isLogo = field === "logo";
+      const compressed = await compressImage(
+        file,
+        isLogo ? 512 : 2000,
+        isLogo && file.type === "image/png" ? "image/png" : "image/jpeg",
+        0.85
+      );
+      const formData = new FormData();
+      formData.append("file", compressed);
+      const url = await uploadBrandingImage(formData, field);
       onChange(url);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Errore durante il caricamento.");
@@ -184,13 +204,7 @@ function ImageUploadField({
   );
 }
 
-export function SettingsPanel({
-  initialSettings,
-  useBlobUpload,
-}: {
-  initialSettings: AppSettings;
-  useBlobUpload: boolean;
-}) {
+export function SettingsPanel({ initialSettings }: { initialSettings: AppSettings }) {
   const [poiProvider, setPoiProvider] = useState<POIProvider>(initialSettings.poiProvider);
   const [googleApiKey, setGoogleApiKey] = useState(initialSettings.googleApiKey ?? "");
   const [googleMapsBrowserKey, setGoogleMapsBrowserKey] = useState(
@@ -321,7 +335,6 @@ export function SettingsPanel({
             onChange={setLandingHeroImageUrl}
             field="hero"
             hint="Mostrata a schermo intero con un leggero effetto Ken Burns. Se vuota, viene usato un gradiente del brand."
-            useBlob={useBlobUpload}
           />
 
           <ImageUploadField
@@ -330,7 +343,6 @@ export function SettingsPanel({
             onChange={setLandingHeroImageMobileUrl}
             field="heroMobile"
             hint="Usata sotto ai 768px di larghezza, idealmente in verticale. Se vuota, viene usata l'immagine desktop."
-            useBlob={useBlobUpload}
           />
 
           <ImageUploadField
@@ -339,7 +351,6 @@ export function SettingsPanel({
             onChange={setLandingLogoUrl}
             field="logo"
             hint="Mostrato al centro della landing, sopra il payoff. Se vuoto, viene usato il nome testuale."
-            useBlob={useBlobUpload}
           />
 
           <div>
