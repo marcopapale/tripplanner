@@ -148,6 +148,9 @@ export interface AppSettings {
   anthropicApiKey?: string;
   aiPoiPromptTemplate?: string;
   customMapId?: string; // Map ID vettoriale da Google Cloud Console con stile personalizzato (es. POI nascosti)
+  landingHeroImageUrl?: string;
+  landingLogoUrl?: string;
+  landingPayoffText?: string;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {

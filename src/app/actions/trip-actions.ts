@@ -156,6 +156,11 @@ export async function getTripByToken(token: string): Promise<Trip | undefined> {
   return getTripByParticipantToken(token);
 }
 
+export async function checkTripAccessCode(code: string): Promise<boolean> {
+  const trip = await getTripByParticipantToken(code.trim());
+  return !!trip;
+}
+
 export async function assignPOI(
   tripId: string,
   dayIndex: number,

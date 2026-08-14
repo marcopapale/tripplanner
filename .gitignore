@@ -32,6 +32,9 @@ yarn-error.log*
 # local JSON "database" — runtime data, not source
 /data/*.json
 
+# immagini di branding caricate localmente (in produzione vanno su Vercel Blob)
+/public/uploads/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

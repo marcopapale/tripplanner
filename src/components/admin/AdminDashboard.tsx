@@ -185,6 +185,9 @@ export function AdminDashboard({
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="font-bold">Gestionale Viaggi</h1>
           <div className="flex items-center gap-4">
+            <Link href="/admin/new-trip" className="text-xs font-semibold text-sunset-dark hover:underline">
+              + Nuovo viaggio
+            </Link>
             <Link href="/admin/settings" className="text-xs text-gray-400 hover:text-gray-600">
               ⚙️ Impostazioni
             </Link>
@@ -197,8 +200,14 @@ export function AdminDashboard({
 
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
         {trips.length === 0 ? (
-          <Card className="p-8 text-center text-sm text-gray-400">
-            Nessun viaggio creato ancora.
+          <Card className="p-8 text-center text-sm text-gray-400 space-y-3">
+            <p>Nessun viaggio creato ancora.</p>
+            <Link
+              href="/admin/new-trip"
+              className="inline-block rounded-full bg-sunset text-white text-sm font-semibold px-6 py-2.5 hover:bg-sunset-dark transition-colors"
+            >
+              + Crea il primo viaggio
+            </Link>
           </Card>
         ) : (
           <>

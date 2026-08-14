@@ -1,23 +1,15 @@
-import { TripForm } from "@/components/TripForm";
+import { getSettings } from "@/lib/db";
+import { LandingHero } from "@/components/LandingHero";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const settings = await getSettings();
   return (
-    <main className="flex-1 bg-gradient-to-b from-sky to-white">
-      <div className="max-w-2xl mx-auto px-4 py-16">
-        <div className="text-center mb-10">
-          <span className="inline-block rounded-full bg-sand text-sunset-dark text-xs font-semibold px-3 py-1 mb-4">
-            Trip Planner
-          </span>
-          <h1 className="text-3xl font-bold tracking-tight mb-2">
-            Organizza il prossimo viaggio di gruppo
-          </h1>
-          <p className="text-gray-500">
-            Destinazione, date e partecipanti: crea il viaggio, poi completa il programma e
-            condividilo quando è pronto.
-          </p>
-        </div>
-        <TripForm />
-      </div>
-    </main>
+    <LandingHero
+      heroImageUrl={settings.landingHeroImageUrl}
+      logoUrl={settings.landingLogoUrl}
+      payoffText={settings.landingPayoffText}
+    />
   );
 }

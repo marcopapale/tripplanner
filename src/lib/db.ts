@@ -11,7 +11,7 @@ import { Trip, POI, AppSettings, DEFAULT_SETTINGS } from "./types";
  * to Vercel Blob, storing the same JSON under the same relative paths.
  */
 
-const USE_BLOB = !!process.env.BLOB_READ_WRITE_TOKEN;
+export const USE_BLOB = !!process.env.BLOB_READ_WRITE_TOKEN;
 
 if (!USE_BLOB && process.env.VERCEL) {
   console.warn(

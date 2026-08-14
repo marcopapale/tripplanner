@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { AppSettings, POIProvider, POI_PROVIDER_LABELS, DEFAULT_AI_POI_PROMPT_TEMPLATE } from "@/lib/types";
 import { updateAppSettings, testGoogleKey } from "@/app/actions/settings-actions";
+import { uploadBrandingImage } from "@/app/actions/branding-actions";
 import { Card, Input, Label } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 
@@ -76,6 +77,89 @@ function TestResultCard({ result, provider }: { result: TestResult; provider: PO
   );
 }
 
+function ImageUploadField({
+  label,
+  value,
+  onChange,
+  field,
+  hint,
+}: {
+  label: string;
+  value: string;
+  onChange: (url: string) => void;
+  field: "hero" | "logo";
+  hint?: string;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputId = `upload-${field}`;
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const url = await uploadBrandingImage(formData, field);
+      onChange(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Errore durante il caricamento.");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  }
+
+  return (
+    <div>
+      <Label>{label}</Label>
+      <div className="flex items-center gap-3">
+        {value ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={value}
+            alt={label}
+            className="h-16 w-16 rounded-xl object-cover border border-gray-200"
+          />
+        ) : (
+          <div className="h-16 w-16 rounded-xl border border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-[10px] text-center px-1">
+            Nessuna immagine
+          </div>
+        )}
+        <div>
+          <label
+            htmlFor={inputId}
+            className="cursor-pointer text-xs font-semibold text-lagoon-dark bg-lagoon/10 hover:bg-lagoon/20 rounded-full px-3 py-1.5 inline-block"
+          >
+            {uploading ? "Caricamento…" : value ? "Cambia immagine" : "Carica immagine"}
+          </label>
+          <input
+            id={inputId}
+            type="file"
+            accept="image/*"
+            onChange={handleFile}
+            disabled={uploading}
+            className="hidden"
+          />
+          {value && (
+            <button
+              type="button"
+              onClick={() => onChange("")}
+              className="ml-2 text-xs text-gray-400 hover:text-red-500"
+            >
+              Rimuovi
+            </button>
+          )}
+        </div>
+      </div>
+      {hint && <p className="text-xs text-gray-400 mt-1">{hint}</p>}
+      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+    </div>
+  );
+}
+
 export function SettingsPanel({ initialSettings }: { initialSettings: AppSettings }) {
   const [poiProvider, setPoiProvider] = useState<POIProvider>(initialSettings.poiProvider);
   const [googleApiKey, setGoogleApiKey] = useState(initialSettings.googleApiKey ?? "");
@@ -83,6 +167,13 @@ export function SettingsPanel({ initialSettings }: { initialSettings: AppSetting
     initialSettings.googleMapsBrowserKey ?? ""
   );
   const [customMapId, setCustomMapId] = useState(initialSettings.customMapId ?? "");
+  const [landingHeroImageUrl, setLandingHeroImageUrl] = useState(
+    initialSettings.landingHeroImageUrl ?? ""
+  );
+  const [landingLogoUrl, setLandingLogoUrl] = useState(initialSettings.landingLogoUrl ?? "");
+  const [landingPayoffText, setLandingPayoffText] = useState(
+    initialSettings.landingPayoffText ?? ""
+  );
   const [anthropicApiKey, setAnthropicApiKey] = useState(initialSettings.anthropicApiKey ?? "");
   const [aiPoiPromptTemplate, setAiPoiPromptTemplate] = useState(
     initialSettings.aiPoiPromptTemplate || DEFAULT_AI_POI_PROMPT_TEMPLATE
@@ -100,6 +191,9 @@ export function SettingsPanel({ initialSettings }: { initialSettings: AppSetting
       googleApiKey,
       googleMapsBrowserKey,
       customMapId,
+      landingHeroImageUrl,
+      landingLogoUrl,
+      landingPayoffText,
       anthropicApiKey,
       aiPoiPromptTemplate,
     });
@@ -176,6 +270,41 @@ export function SettingsPanel({ initialSettings }: { initialSettings: AppSetting
               {testResult && <TestResultCard result={testResult} provider="google" />}
             </div>
           )}
+        </Card>
+
+        <Card className="p-6 space-y-4">
+          <div>
+            <h2 className="text-sm font-bold text-gray-700 mb-1">Landing page</h2>
+            <p className="text-xs text-gray-500 mb-3">
+              Immagine di sfondo, logo e payoff mostrati nella home pubblica del servizio, da cui
+              chi non ha il link diretto può inserire il proprio codice viaggio.
+            </p>
+          </div>
+
+          <ImageUploadField
+            label="Immagine di sfondo"
+            value={landingHeroImageUrl}
+            onChange={setLandingHeroImageUrl}
+            field="hero"
+            hint="Mostrata a schermo intero con un leggero effetto Ken Burns. Se vuota, viene usato un gradiente del brand."
+          />
+
+          <ImageUploadField
+            label="Logo"
+            value={landingLogoUrl}
+            onChange={setLandingLogoUrl}
+            field="logo"
+            hint="Mostrato al centro della landing, sopra il payoff. Se vuoto, viene usato il nome testuale."
+          />
+
+          <div>
+            <Label>Payoff</Label>
+            <Input
+              placeholder="Organizza il prossimo viaggio di gruppo"
+              value={landingPayoffText}
+              onChange={(e) => setLandingPayoffText(e.target.value)}
+            />
+          </div>
         </Card>
 
         <Card className="p-6 space-y-5">
