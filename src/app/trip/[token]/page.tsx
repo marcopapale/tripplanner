@@ -15,5 +15,12 @@ export default async function TripPage({
 
   const [pois, settings] = await Promise.all([listPOIsForTrip(trip.id), getSettings()]);
 
-  return <TripView trip={trip} pois={pois} googleMapsBrowserKey={settings.googleMapsBrowserKey} />;
+  return (
+    <TripView
+      trip={trip}
+      pois={pois}
+      googleMapsBrowserKey={settings.googleMapsBrowserKey}
+      customMapId={settings.customMapId}
+    />
+  );
 }

@@ -28,10 +28,12 @@ export function TripView({
   trip,
   pois,
   googleMapsBrowserKey,
+  customMapId,
 }: {
   trip: Trip;
   pois: POI[];
   googleMapsBrowserKey?: string;
+  customMapId?: string;
 }) {
   const status = tripStatus(trip.startDate, trip.endDate);
   const daysLeft = daysUntilStart(trip.startDate);
@@ -128,6 +130,7 @@ export function TripView({
                 centerLon={trip.lon}
                 destinationName={trip.destination}
                 markers={markers}
+                mapId={customMapId}
               />
             ) : (
               <div className="h-full w-full flex items-center justify-center text-sm text-gray-400 text-center px-4">

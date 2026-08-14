@@ -17,12 +17,14 @@ export function GoogleMapView({
   centerLon,
   destinationName,
   markers,
+  mapId,
 }: {
   apiKey: string;
   centerLat: number;
   centerLon: number;
   destinationName: string;
   markers: MapMarker[];
+  mapId?: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -55,7 +57,7 @@ export function GoogleMapView({
         mapRef.current = new g.maps.Map(containerRef.current, {
           center: { lat: centerLat, lng: centerLon },
           zoom: 12,
-          mapId: "DEMO_MAP_ID",
+          mapId: mapId || "DEMO_MAP_ID",
           gestureHandling: "cooperative",
           streetViewControl: false,
           fullscreenControl: false,

@@ -190,6 +190,7 @@ export function POIMapSearch({
   selectedDay,
   poiProvider,
   googleMapsBrowserKey,
+  customMapId,
   onAssignExisting,
   onAddAndAssign,
 }: {
@@ -201,6 +202,7 @@ export function POIMapSearch({
   selectedDay: number;
   poiProvider: POIProvider;
   googleMapsBrowserKey?: string;
+  customMapId?: string;
   onAssignExisting: (poi: POI, dayIndex: number, slots: Slot[]) => Promise<void>;
   onAddAndAssign: (
     result: Omit<POI, "id" | "tripId">,
@@ -303,7 +305,7 @@ export function POIMapSearch({
         const map = new g.maps.Map(containerRef.current, {
           center: { lat: trip.lat, lng: trip.lon },
           zoom: 14,
-          mapId: "DEMO_MAP_ID",
+          mapId: customMapId || "DEMO_MAP_ID",
           gestureHandling: "cooperative",
           streetViewControl: false,
           fullscreenControl: false,

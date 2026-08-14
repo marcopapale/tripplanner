@@ -24,6 +24,7 @@ export default async function AdminPage({
       initialPOIs={pois}
       poiProvider={settings.poiProvider}
       googleMapsBrowserKey={settings.googleMapsBrowserKey}
+      customMapId={settings.customMapId}
       initialSelectedTripId={trip}
     />
   );

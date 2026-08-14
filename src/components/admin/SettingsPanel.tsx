@@ -82,6 +82,7 @@ export function SettingsPanel({ initialSettings }: { initialSettings: AppSetting
   const [googleMapsBrowserKey, setGoogleMapsBrowserKey] = useState(
     initialSettings.googleMapsBrowserKey ?? ""
   );
+  const [customMapId, setCustomMapId] = useState(initialSettings.customMapId ?? "");
   const [anthropicApiKey, setAnthropicApiKey] = useState(initialSettings.anthropicApiKey ?? "");
   const [aiPoiPromptTemplate, setAiPoiPromptTemplate] = useState(
     initialSettings.aiPoiPromptTemplate || DEFAULT_AI_POI_PROMPT_TEMPLATE
@@ -98,6 +99,7 @@ export function SettingsPanel({ initialSettings }: { initialSettings: AppSetting
       poiProvider,
       googleApiKey,
       googleMapsBrowserKey,
+      customMapId,
       anthropicApiKey,
       aiPoiPromptTemplate,
     });
@@ -176,15 +178,16 @@ export function SettingsPanel({ initialSettings }: { initialSettings: AppSetting
           )}
         </Card>
 
-        <Card className="p-6 space-y-4">
+        <Card className="p-6 space-y-5">
           <div>
-            <h2 className="text-sm font-bold text-gray-700 mb-1">Mappa (Google Maps)</h2>
+            <h2 className="text-sm font-bold text-gray-700 mb-1">Mappe</h2>
             <p className="text-xs text-gray-500 mb-3">
-              Chiave usata per mostrare la mappa nel browser (visibile nel codice della pagina).
-              Diversa da quella usata per la ricerca POI qui sopra: questa deve essere ristretta
-              per "Siti web" al tuo dominio (es. <code>*.vercel.app</code>) nella Google Cloud
-              Console — l'altra invece non va ristretta per dominio, viene chiamata dal server.
+              Impostazioni relative alle mappe Google Maps usate nel Gestionale e nelle pagine
+              viaggio condivise.
             </p>
+          </div>
+
+          <div>
             <Label>Google Maps JavaScript API Key</Label>
             <Input
               type="password"
@@ -192,6 +195,62 @@ export function SettingsPanel({ initialSettings }: { initialSettings: AppSetting
               value={googleMapsBrowserKey}
               onChange={(e) => setGoogleMapsBrowserKey(e.target.value)}
             />
+            <p className="text-xs text-gray-400 mt-1">
+              Chiave usata per mostrare la mappa nel browser (visibile nel codice della pagina).
+              Diversa da quella usata per la ricerca POI qui sopra: questa deve essere ristretta
+              per "Siti web" al tuo dominio (es. <code>*.vercel.app</code>) nella Google Cloud
+              Console — l'altra invece non va ristretta per dominio, viene chiamata dal server.
+            </p>
+          </div>
+
+          <div className="border-t border-gray-100 pt-4">
+            <Label>Map ID personalizzato (stile mappa)</Label>
+            <Input
+              placeholder="Es. 8f2a1b3c4d5e6f70"
+              value={customMapId}
+              onChange={(e) => setCustomMapId(e.target.value)}
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Opzionale. Permette di usare uno stile mappa personalizzato — ad esempio per
+              nascondere le icone e le etichette dei punti di interesse nativi di Google, che
+              altrimenti si sovrappongono ai nostri pin colorati. Lasciando vuoto questo campo la
+              mappa usa lo stile demo di Google (icone POI native visibili).
+            </p>
+            <details className="mt-2 text-xs text-gray-500 bg-gray-50 rounded-xl p-3">
+              <summary className="cursor-pointer font-semibold text-gray-600">
+                Come creare e configurare un Map ID
+              </summary>
+              <ol className="list-decimal list-inside space-y-1.5 mt-2">
+                <li>
+                  Vai su{" "}
+                  <a
+                    href="https://console.cloud.google.com/google/maps-apis/studio/maps"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-lagoon-dark underline"
+                  >
+                    Google Cloud Console → Maps Management → Map IDs
+                  </a>{" "}
+                  del progetto collegato alla tua API key.
+                </li>
+                <li>
+                  Crea un nuovo Map ID: piattaforma <strong>JavaScript</strong>, rendering{" "}
+                  <strong>Vector</strong> (obbligatorio — i nostri pin colorati richiedono la
+                  mappa vettoriale).
+                </li>
+                <li>Copia l'ID generato e incollalo qui sopra, poi salva le impostazioni.</li>
+                <li>
+                  Nella stessa pagina, apri o crea uno <strong>Stile mappa</strong> e associalo a
+                  questo Map ID.
+                </li>
+                <li>
+                  Nell'editor dello stile, disattiva il layer{" "}
+                  <strong>"Points of interest"</strong> (icone ed etichette) per nascondere i POI
+                  nativi di Google. Da qui potrai in futuro personalizzare anche colori e tema
+                  della mappa.
+                </li>
+              </ol>
+            </details>
           </div>
         </Card>
 

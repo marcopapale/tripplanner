@@ -147,6 +147,7 @@ export interface AppSettings {
   googleMapsBrowserKey?: string; // client-side, loaded in the browser — must be HTTP-referrer restricted
   anthropicApiKey?: string;
   aiPoiPromptTemplate?: string;
+  customMapId?: string; // Map ID vettoriale da Google Cloud Console con stile personalizzato (es. POI nascosti)
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
