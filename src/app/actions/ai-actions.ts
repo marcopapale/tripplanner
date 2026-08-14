@@ -46,10 +46,18 @@ async function resolvePlace(
     const geocoded = await geocodePlace(`${name}, ${trip.destination}`);
     if (geocoded) place = geocoded;
   }
-  if (!place) return null;
+  if (!place) {
+    console.log(`[AI proposal] "${name}": nessun risultato dal geocoder/Places, scartato`);
+    return null;
+  }
 
   const distance = haversineDistanceMeters(trip.lat, trip.lon, place.lat, place.lon);
-  if (distance > MAX_POI_DISTANCE_METERS) return null;
+  if (distance > MAX_POI_DISTANCE_METERS) {
+    console.log(
+      `[AI proposal] "${name}": trovato a ${Math.round(distance / 1000)}km dalla destinazione, oltre il limite di ${MAX_POI_DISTANCE_METERS / 1000}km, scartato`
+    );
+    return null;
+  }
 
   return place;
 }
@@ -186,6 +194,9 @@ export async function generateAIPOIProposal(
   );
 
   const proposal = resolved.filter((p): p is AIPOIProposalItem => p !== null);
+  console.log(
+    `[AI proposal] Claude ha proposto ${raw?.length ?? 0} tappe, risolte con successo: ${proposal.length}`
+  );
   trip.aiPoiProposal = proposal;
   await upsertTrip(trip);
   return proposal;

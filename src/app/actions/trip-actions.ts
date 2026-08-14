@@ -73,8 +73,12 @@ export async function createTrip(
   try {
     const proposal = await generateAIPOIProposal(trip.id);
     hasAIProposal = proposal.length > 0;
-  } catch {
+  } catch (err) {
     // niente proposta pronta: l'admin potrà rigenerarla dal Gestionale.
+    console.log(
+      `[createTrip] generateAIPOIProposal fallita per "${trip.destination}":`,
+      err instanceof Error ? err.message : err
+    );
   }
 
   return { tripId: trip.id, hasAIProposal };
