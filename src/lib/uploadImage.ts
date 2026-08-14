@@ -17,13 +17,19 @@ const EXT_BY_MIME: Record<string, string> = {
 const UPLOADS_DIR = path.join(process.cwd(), "public", "uploads");
 
 /**
- * Immagini di branding (logo, sfondo landing): a differenza dei JSON di dati
- * (privati), qui serve storage pubblico perché la landing la vedono
- * visitatori anonimi non autenticati. Il file arriva già ridimensionato dal
- * browser (`ImageUploadField` in `SettingsPanel.tsx`) — Vercel impone un
+ * Immagini di branding (logo, sfondo landing) — le vedono visitatori
+ * anonimi, ma lo store Blob collegato a questo progetto è configurato come
+ * "private" (impostazione fissata alla creazione dello store, non
+ * modificabile: `put()` con `access:"public"` fallisce con "Cannot use
+ * public access on a private store"). Scriviamo quindi come private (stesso
+ * meccanismo già usato per i JSON di dati) e le serviamo pubblicamente
+ * tramite il proxy `src/app/api/branding/[filename]/route.ts`, che fa `get()`
+ * lato server e ne inoltra lo stream — pattern raccomandato da Vercel per
+ * gli store privati. Il file arriva già ridimensionato dal browser
+ * (`ImageUploadField` in `SettingsPanel.tsx`) — Vercel impone comunque un
  * limite fisso di 4.5MB sul body delle funzioni serverless indipendente da
  * `bodySizeLimit` di Next, quindi senza compressione lato client un file
- * fotografico originale rischia di superarlo comunque.
+ * fotografico originale rischierebbe di superarlo.
  */
 export async function saveUploadedImage(file: File, prefix: string): Promise<string> {
   if (!file.type.startsWith("image/")) {
@@ -37,13 +43,13 @@ export async function saveUploadedImage(file: File, prefix: string): Promise<str
   const filename = `${prefix}-${nanoid(10)}.${ext}`;
 
   if (USE_BLOB) {
-    const blob = await put(`uploads/${filename}`, file, {
-      access: "public",
+    await put(`uploads/${filename}`, file, {
+      access: "private",
       addRandomSuffix: false,
       allowOverwrite: true,
       contentType: file.type,
     });
-    return blob.url;
+    return `/api/branding/${filename}`;
   }
 
   await fs.mkdir(UPLOADS_DIR, { recursive: true });
