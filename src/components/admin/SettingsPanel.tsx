@@ -2,11 +2,21 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { upload } from "@vercel/blob/client";
+import { nanoid } from "nanoid";
 import { AppSettings, POIProvider, POI_PROVIDER_LABELS, DEFAULT_AI_POI_PROMPT_TEMPLATE } from "@/lib/types";
 import { updateAppSettings, testGoogleKey } from "@/app/actions/settings-actions";
 import { uploadBrandingImage } from "@/app/actions/branding-actions";
 import { Card, Input, Label } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+
+const EXT_BY_MIME: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+  "image/svg+xml": "svg",
+};
 
 const PROVIDERS: POIProvider[] = ["osm", "google"];
 
@@ -83,12 +93,14 @@ function ImageUploadField({
   onChange,
   field,
   hint,
+  useBlob,
 }: {
   label: string;
   value: string;
   onChange: (url: string) => void;
   field: "hero" | "heroMobile" | "logo";
   hint?: string;
+  useBlob: boolean;
 }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -100,9 +112,21 @@ function ImageUploadField({
     setUploading(true);
     setError(null);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const url = await uploadBrandingImage(formData, field);
+      let url: string;
+      if (useBlob) {
+        // Upload diretto al bucket Vercel Blob dal browser: aggira il
+        // limite di 4.5MB sul body delle funzioni serverless.
+        const ext = EXT_BY_MIME[file.type] ?? "jpg";
+        const blob = await upload(`uploads/${field}-${nanoid(10)}.${ext}`, file, {
+          access: "public",
+          handleUploadUrl: "/api/branding-upload",
+        });
+        url = blob.url;
+      } else {
+        const formData = new FormData();
+        formData.append("file", file);
+        url = await uploadBrandingImage(formData, field);
+      }
       onChange(url);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Errore durante il caricamento.");
@@ -160,7 +184,13 @@ function ImageUploadField({
   );
 }
 
-export function SettingsPanel({ initialSettings }: { initialSettings: AppSettings }) {
+export function SettingsPanel({
+  initialSettings,
+  useBlobUpload,
+}: {
+  initialSettings: AppSettings;
+  useBlobUpload: boolean;
+}) {
   const [poiProvider, setPoiProvider] = useState<POIProvider>(initialSettings.poiProvider);
   const [googleApiKey, setGoogleApiKey] = useState(initialSettings.googleApiKey ?? "");
   const [googleMapsBrowserKey, setGoogleMapsBrowserKey] = useState(
@@ -291,6 +321,7 @@ export function SettingsPanel({ initialSettings }: { initialSettings: AppSetting
             onChange={setLandingHeroImageUrl}
             field="hero"
             hint="Mostrata a schermo intero con un leggero effetto Ken Burns. Se vuota, viene usato un gradiente del brand."
+            useBlob={useBlobUpload}
           />
 
           <ImageUploadField
@@ -299,6 +330,7 @@ export function SettingsPanel({ initialSettings }: { initialSettings: AppSetting
             onChange={setLandingHeroImageMobileUrl}
             field="heroMobile"
             hint="Usata sotto ai 768px di larghezza, idealmente in verticale. Se vuota, viene usata l'immagine desktop."
+            useBlob={useBlobUpload}
           />
 
           <ImageUploadField
@@ -307,6 +339,7 @@ export function SettingsPanel({ initialSettings }: { initialSettings: AppSetting
             onChange={setLandingLogoUrl}
             field="logo"
             hint="Mostrato al centro della landing, sopra il payoff. Se vuoto, viene usato il nome testuale."
+            useBlob={useBlobUpload}
           />
 
           <div>

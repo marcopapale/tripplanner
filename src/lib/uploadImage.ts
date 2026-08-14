@@ -4,7 +4,15 @@ import { put } from "@vercel/blob";
 import { nanoid } from "nanoid";
 import { USE_BLOB } from "./db";
 
-const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
+export const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
+
+export const ALLOWED_IMAGE_CONTENT_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/svg+xml",
+];
 
 const EXT_BY_MIME: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -17,9 +25,13 @@ const EXT_BY_MIME: Record<string, string> = {
 const UPLOADS_DIR = path.join(process.cwd(), "public", "uploads");
 
 /**
- * Immagini di branding (logo, sfondo landing): a differenza dei JSON di dati
- * (privati), qui serve storage pubblico perché la landing la vedono
- * visitatori anonimi non autenticati.
+ * Percorso usato dalla server action `uploadBrandingImage` (dev locale, o
+ * fallback per file piccoli). Vercel impone un limite fisso di 4.5MB sul
+ * body delle funzioni serverless indipendente da `bodySizeLimit` di Next —
+ * per questo il caricamento da browser in produzione passa invece per
+ * `@vercel/blob/client` (upload diretto al bucket, vedi
+ * `src/app/api/branding-upload/route.ts` e `ImageUploadField` in
+ * `SettingsPanel.tsx`), che non transita da questa funzione.
  */
 export async function saveUploadedImage(file: File, prefix: string): Promise<string> {
   if (!file.type.startsWith("image/")) {
