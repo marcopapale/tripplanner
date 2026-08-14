@@ -80,7 +80,7 @@ async function callClaudeTool<T>(
     },
     body: JSON.stringify({
       model: ANTHROPIC_MODEL,
-      max_tokens: 1500,
+      max_tokens: 4096,
       messages: [{ role: "user", content: userPrompt }],
       tools: [{ name: toolName, description: toolDescription, input_schema: inputSchema }],
       tool_choice: { type: "tool", name: toolName },
@@ -96,7 +96,14 @@ async function callClaudeTool<T>(
   const toolUse = (data.content ?? []).find((b: { type: string }) => b.type === "tool_use") as
     | { input?: T }
     | undefined;
-  if (!toolUse?.input) throw new Error("Risposta AI non valida.");
+  if (!toolUse?.input) {
+    // stop_reason "max_tokens" con un paniere grande è il sospetto principale:
+    // la risposta viene troncata a metà e il tool_use non si forma correttamente.
+    console.log(
+      `[callClaudeTool] "${toolName}" senza input valido — stop_reason: ${data.stop_reason}, blocchi: ${JSON.stringify((data.content ?? []).map((b: { type: string }) => b.type))}`
+    );
+    throw new Error("Risposta AI non valida.");
+  }
   return toolUse.input;
 }
 
