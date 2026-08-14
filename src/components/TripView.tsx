@@ -131,6 +131,9 @@ export function TripView({
                 destinationName={trip.destination}
                 markers={markers}
                 mapId={customMapId}
+                accommodationName={trip.accommodationName}
+                accommodationLat={trip.accommodationLat}
+                accommodationLon={trip.accommodationLon}
               />
             ) : (
               <div className="h-full w-full flex items-center justify-center text-sm text-gray-400 text-center px-4">

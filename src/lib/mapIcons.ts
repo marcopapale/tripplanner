@@ -13,6 +13,8 @@ export const CATEGORY_COLOR: Record<POICategory, string> = {
   altro: "#6b7280",
 };
 
+export const ACCOMMODATION_EMOJI = "🏠";
+
 export const CATEGORY_EMOJI: Record<POICategory, string> = {
   monumento: "🗿",
   chiesa: "⛪",

@@ -30,6 +30,9 @@ export interface CreateTripInput {
   endDate: string;
   transportMode: TransportMode;
   participants: { firstName: string; lastName: string; email: string }[];
+  accommodationName?: string;
+  accommodationLat?: number;
+  accommodationLon?: number;
 }
 
 function emptyDay(): ItineraryDay {
@@ -62,6 +65,9 @@ export async function createTrip(
     })),
     itinerary,
     createdAt: new Date().toISOString(),
+    accommodationName: input.accommodationName,
+    accommodationLat: input.accommodationLat,
+    accommodationLon: input.accommodationLon,
   };
 
   await upsertTrip(trip);

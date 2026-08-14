@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { loadGoogleMapsLibraries } from "@/lib/googleMapsLoader";
 import { PlaceDetailsCard } from "@/components/PlaceDetailsCard";
 import { POI, SLOT_LABELS, Slot } from "@/lib/types";
-import { CATEGORY_COLOR, CATEGORY_EMOJI } from "@/lib/mapIcons";
+import { ACCOMMODATION_EMOJI, CATEGORY_COLOR, CATEGORY_EMOJI } from "@/lib/mapIcons";
 
 interface MapMarker {
   poi: POI;
@@ -18,6 +18,9 @@ export function GoogleMapView({
   destinationName,
   markers,
   mapId,
+  accommodationName,
+  accommodationLat,
+  accommodationLon,
 }: {
   apiKey: string;
   centerLat: number;
@@ -25,6 +28,9 @@ export function GoogleMapView({
   destinationName: string;
   markers: MapMarker[];
   mapId?: string;
+  accommodationName?: string;
+  accommodationLat?: number;
+  accommodationLon?: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -92,6 +98,23 @@ export function GoogleMapView({
     markerObjsRef.current.forEach((m) => (m.map = null));
     markerObjsRef.current = [];
 
+    const addAccommodationMarker = () => {
+      if (accommodationLat == null || accommodationLon == null) return;
+      const el = document.createElement("div");
+      el.style.cssText =
+        `width:30px;height:30px;border-radius:9999px;display:flex;align-items:center;` +
+        `justify-content:center;font-size:15px;border:2px solid #1f2937;` +
+        `box-shadow:0 2px 6px rgba(0,0,0,.3);background:white`;
+      el.textContent = ACCOMMODATION_EMOJI;
+      const marker = new g.maps.marker.AdvancedMarkerElement({
+        map,
+        position: { lat: accommodationLat, lng: accommodationLon },
+        title: accommodationName || "Alloggio",
+        content: el,
+      });
+      markerObjsRef.current.push(marker);
+    };
+
     if (markers.length === 0) {
       map.setCenter({ lat: centerLat, lng: centerLon });
       map.setZoom(11);
@@ -101,10 +124,15 @@ export function GoogleMapView({
         title: destinationName,
       });
       markerObjsRef.current.push(destinationMarker);
+      addAccommodationMarker();
       return;
     }
 
     const bounds = new g.maps.LatLngBounds();
+    addAccommodationMarker();
+    if (accommodationLat != null && accommodationLon != null) {
+      bounds.extend({ lat: accommodationLat, lng: accommodationLon });
+    }
     for (const entry of markers) {
       const el = document.createElement("div");
       el.style.cssText =
@@ -130,7 +158,16 @@ export function GoogleMapView({
     }
     bounds.extend({ lat: centerLat, lng: centerLon });
     map.fitBounds(bounds, 48);
-  }, [ready, markers, centerLat, centerLon, destinationName]);
+  }, [
+    ready,
+    markers,
+    centerLat,
+    centerLon,
+    destinationName,
+    accommodationLat,
+    accommodationLon,
+    accommodationName,
+  ]);
 
   return (
     <div className="relative h-full w-full">

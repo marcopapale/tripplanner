@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createTrip } from "@/app/actions/trip-actions";
 import { TransportMode, TRANSPORT_MODE_LABELS } from "@/lib/types";
 import { Card, Input, Label } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { CreatingTripOverlay } from "@/components/CreatingTripOverlay";
+import { loadGoogleMapsLibraries } from "@/lib/googleMapsLoader";
 
 interface ParticipantRow {
   firstName: string;
@@ -14,19 +15,61 @@ interface ParticipantRow {
   email: string;
 }
 
+interface Accommodation {
+  name: string;
+  lat: number;
+  lon: number;
+}
+
 function emptyParticipant(): ParticipantRow {
   return { firstName: "", lastName: "", email: "" };
 }
 
-export function TripForm() {
+export function TripForm({ googleMapsBrowserKey }: { googleMapsBrowserKey?: string }) {
   const router = useRouter();
   const [destination, setDestination] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [transportMode, setTransportMode] = useState<TransportMode>("auto");
   const [participants, setParticipants] = useState<ParticipantRow[]>([emptyParticipant()]);
+  const [accommodation, setAccommodation] = useState<Accommodation | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const accommodationContainerRef = useRef<HTMLDivElement>(null);
+
+  // Autocomplete Google Places per l'alloggio (Casa/B&B/Hotel) — stesso
+  // pattern di POIMapSearch.tsx: il contenitore NON deve avere
+  // overflow-hidden, altrimenti il pannello dei suggerimenti resta invisibile.
+  useEffect(() => {
+    if (!googleMapsBrowserKey) return;
+    const container = accommodationContainerRef.current;
+    if (!container) return;
+    let cancelled = false;
+    let el: google.maps.places.PlaceAutocompleteElement | null = null;
+
+    loadGoogleMapsLibraries(googleMapsBrowserKey, ["places"]).then((g) => {
+      if (cancelled || !container) return;
+      el = new g.maps.places.PlaceAutocompleteElement({});
+      el.placeholder = "Cerca indirizzo, hotel o B&B…";
+      (el.style as CSSStyleDeclaration).width = "100%";
+      container.appendChild(el);
+
+      el.addEventListener("gmp-select", async (event: google.maps.places.PlacePredictionSelectEvent) => {
+        const place = event.placePrediction.toPlace();
+        const { place: full } = await place.fetchFields({ fields: ["displayName", "location"] });
+        const lat = full.location?.lat();
+        const lon = full.location?.lng();
+        if (lat == null || lon == null) return;
+        setAccommodation({ name: full.displayName ?? "Alloggio", lat, lon });
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      if (el && container.contains(el)) container.removeChild(el);
+    };
+  }, [googleMapsBrowserKey]);
 
   function setCount(count: number) {
     const n = Math.max(1, Math.min(30, count));
@@ -67,6 +110,9 @@ export function TripForm() {
         endDate,
         transportMode,
         participants,
+        accommodationName: accommodation?.name,
+        accommodationLat: accommodation?.lat,
+        accommodationLon: accommodation?.lon,
       });
       router.push(hasAIProposal ? `/personalizza-viaggio/${tripId}` : `/admin?trip=${tripId}`);
     } catch (err) {
@@ -91,6 +137,34 @@ export function TripForm() {
             onChange={(e) => setDestination(e.target.value)}
             required
           />
+        </div>
+        <div>
+          <Label>Alloggio (Casa / B&B / Hotel)</Label>
+          {googleMapsBrowserKey ? (
+            <>
+              <div ref={accommodationContainerRef} className="[&>*]:w-full" />
+              {accommodation && (
+                <p className="text-xs text-lagoon-dark mt-1.5 flex items-center gap-1.5">
+                  🏠 {accommodation.name}
+                  <button
+                    type="button"
+                    onClick={() => setAccommodation(null)}
+                    className="text-gray-400 hover:text-red-500"
+                  >
+                    ✕
+                  </button>
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="text-xs text-gray-400">
+              Configura la Google Maps API Key nelle{" "}
+              <a href="/admin/settings" className="underline">
+                Impostazioni
+              </a>{" "}
+              per cercare l&apos;indirizzo.
+            </p>
+          )}
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>

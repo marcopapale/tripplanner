@@ -1,7 +1,11 @@
 import Link from "next/link";
+import { getSettings } from "@/lib/db";
 import { TripForm } from "@/components/TripForm";
 
-export default function NewTripPage() {
+export const dynamic = "force-dynamic";
+
+export default async function NewTripPage() {
+  const settings = await getSettings();
   return (
     <main className="flex-1 bg-gradient-to-b from-sky to-white">
       <header className="border-b border-gray-100 bg-white">
@@ -26,7 +30,7 @@ export default function NewTripPage() {
             condividilo quando è pronto.
           </p>
         </div>
-        <TripForm />
+        <TripForm googleMapsBrowserKey={settings.googleMapsBrowserKey} />
       </div>
     </main>
   );

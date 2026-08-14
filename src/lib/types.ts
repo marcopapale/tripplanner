@@ -129,6 +129,9 @@ export interface Trip {
   shared?: boolean; // true once the admin has explicitly shared participant links
   aiCategories?: POICategory[]; // AI-curated categories for this destination, cached on first admin visit
   aiPoiProposal?: AIPOIProposalItem[]; // proposta AI pendente, in attesa di approvazione/scarto
+  accommodationName?: string; // Casa/B&B/Hotel scelto in fase di creazione, mostrato come pin fisso sulla mappa
+  accommodationLat?: number;
+  accommodationLon?: number;
 }
 
 export type POIProvider = "osm" | "google";

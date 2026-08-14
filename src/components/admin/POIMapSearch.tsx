@@ -17,7 +17,7 @@ import { MapBounds } from "@/lib/poiDiscovery";
 import { searchAreaPOIs } from "@/app/actions/poi-actions";
 import { getTripCategories } from "@/app/actions/ai-actions";
 import { formatDayLabel } from "@/lib/dates";
-import { CATEGORY_COLOR, CATEGORY_EMOJI } from "@/lib/mapIcons";
+import { ACCOMMODATION_EMOJI, CATEGORY_COLOR, CATEGORY_EMOJI } from "@/lib/mapIcons";
 import { loadGoogleMapsLibraries } from "@/lib/googleMapsLoader";
 import { PlaceDetailsCard } from "@/components/PlaceDetailsCard";
 
@@ -397,6 +397,22 @@ export function POIMapSearch({
     markerObjsRef.current.forEach((m) => (m.map = null));
     markerObjsRef.current = [];
 
+    if (trip.accommodationLat != null && trip.accommodationLon != null) {
+      const el = document.createElement("div");
+      el.style.cssText =
+        `width:30px;height:30px;border-radius:9999px;display:flex;align-items:center;` +
+        `justify-content:center;font-size:15px;border:2px solid #1f2937;` +
+        `box-shadow:0 2px 6px rgba(0,0,0,.3);background:white`;
+      el.textContent = ACCOMMODATION_EMOJI;
+      const marker = new g.maps.marker.AdvancedMarkerElement({
+        map,
+        position: { lat: trip.accommodationLat, lng: trip.accommodationLon },
+        title: trip.accommodationName || "Alloggio",
+        content: el,
+      });
+      markerObjsRef.current.push(marker);
+    }
+
     for (const poi of mapPOIs) {
       const el = document.createElement("div");
       el.style.cssText =
@@ -459,9 +475,12 @@ export function POIMapSearch({
       </div>
 
       {googleMapsBrowserKey && (
+        // Niente overflow-hidden qui: il pannello dei suggerimenti di
+        // PlaceAutocompleteElement si estende sotto al campo e verrebbe
+        // tagliato via, rendendo la ricerca visivamente "senza risultati".
         <div
           ref={autocompleteContainerRef}
-          className="[&>*]:w-full rounded-2xl border border-gray-200 overflow-hidden"
+          className="relative z-10 [&>*]:w-full rounded-2xl border border-gray-200"
         />
       )}
 
