@@ -9,7 +9,6 @@ import {
   POICategory,
   POIProvider,
   POI_CATEGORY_LABELS,
-  POI_CATEGORY_DEFAULT_SLOTS,
   SLOTS,
   SLOT_LABELS,
   Slot,
@@ -511,7 +510,10 @@ function AddPOIForm({
             lat,
             lon,
             description: description || undefined,
-            validSlots: POI_CATEGORY_DEFAULT_SLOTS[category],
+            // Nessun selettore fasce qui: aggiunto manualmente, va reso
+            // assegnabile a qualunque fascia invece di limitarlo ai default
+            // della categoria.
+            validSlots: SLOTS,
           });
           setSaving(false);
         }}

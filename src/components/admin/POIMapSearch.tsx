@@ -10,6 +10,7 @@ import {
   POI_CATEGORY_LABELS,
   POI_CATEGORY_DEFAULT_SLOTS,
   OSM_SEARCH_CATEGORIES,
+  SLOTS,
   SLOT_LABELS,
   Slot,
 } from "@/lib/types";
@@ -107,9 +108,13 @@ function AssignForm({
   defaultDay: number;
   onConfirm: (dayIndex: number, slots: Slot[]) => Promise<void>;
 }) {
-  const availableSlots = POI_CATEGORY_DEFAULT_SLOTS[category];
+  // Tutte le fasce sono selezionabili: la categoria suggerisce solo la
+  // preselezione iniziale, non è più un vincolo — l'admin può assegnare un
+  // posto a qualunque fascia voglia, anche fuori dalla sua "pertinenza".
   const [day, setDay] = useState(defaultDay);
-  const [slots, setSlots] = useState<Set<Slot>>(new Set([availableSlots[0]]));
+  const [slots, setSlots] = useState<Set<Slot>>(
+    new Set([POI_CATEGORY_DEFAULT_SLOTS[category][0]])
+  );
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
 
@@ -149,7 +154,7 @@ function AssignForm({
             ))}
           </select>
           <div className="flex flex-wrap gap-1">
-            {availableSlots.map((s) => (
+            {SLOTS.map((s) => (
               <button
                 key={s}
                 type="button"
@@ -561,6 +566,10 @@ export function POIMapSearch({
                 </button>
                 {selected.kind === "catalog" ? (
                   <AssignForm
+                    // key: forza il remount quando si passa a un pin diverso,
+                    // altrimenti giorno/fasce/"Aggiunto" scelti per il pin
+                    // precedente restano appiccicati a quello nuovo.
+                    key={`catalog-${selected.poi.id}`}
                     name={selected.poi.name}
                     category={selected.poi.category}
                     rating={selected.poi.rating}
@@ -572,6 +581,7 @@ export function POIMapSearch({
                   />
                 ) : (
                   <AssignForm
+                    key={`result-${selected.result.tempId}`}
                     name={selected.result.name}
                     category={selected.result.category}
                     rating={selected.result.rating}
@@ -587,7 +597,9 @@ export function POIMapSearch({
                           lat: selected.result.lat,
                           lon: selected.result.lon,
                           description: selected.result.description,
-                          validSlots: POI_CATEGORY_DEFAULT_SLOTS[selected.result.category],
+                          // Le fasce effettivamente scelte dall'admin, non più
+                          // limitate ai default della categoria.
+                          validSlots: slots,
                           rating: selected.result.rating,
                           priceLevel: selected.result.priceLevel,
                           placeId: selected.result.placeId,
