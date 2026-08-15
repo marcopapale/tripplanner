@@ -12,6 +12,7 @@ import {
   formatDayFullLabel,
 } from "@/lib/dates";
 import { Card } from "@/components/ui/Card";
+import { backfillPoiPhoto } from "@/app/actions/poi-actions";
 
 // Il rating ha senso solo per posti dove si mangia/beve — altrove (musei,
 // monumenti...) è rumore, non un criterio con cui l'utente li sceglie.
@@ -24,13 +25,32 @@ function PoiThumbnail({
   poi: POI;
   fallbackImageUrl?: string;
 }) {
+  const [photoUrl, setPhotoUrl] = useState(poi.photoUrl);
   const [stage, setStage] = useState<0 | 1 | 2>(poi.photoUrl ? 0 : fallbackImageUrl ? 1 : 2);
-  const src = stage === 0 ? poi.photoUrl : stage === 1 ? fallbackImageUrl : undefined;
+
+  // Backfill una tantum: POI catalogati prima che esistesse questo campo
+  // hanno un placeId ma nessuna foto salvata — la recuperiamo al volo e
+  // la persistiamo lato server, così le prossime visite non rifanno la chiamata.
+  useEffect(() => {
+    if (poi.photoUrl || !poi.placeId) return;
+    let cancelled = false;
+    backfillPoiPhoto(poi.id).then((url) => {
+      if (cancelled || !url) return;
+      setPhotoUrl(url);
+      setStage(0);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [poi.id, poi.placeId, poi.photoUrl]);
+
+  const src = stage === 0 ? photoUrl : stage === 1 ? fallbackImageUrl : undefined;
 
   if (!src) {
     return (
       <div
-        className="h-14 w-14 rounded-xl shrink-0 flex items-center justify-center text-xl"
+        className="h-20 w-20 rounded-2xl shrink-0 flex items-center justify-center text-3xl"
         style={{ background: `${CATEGORY_COLOR[poi.category]}22` }}
       >
         {CATEGORY_EMOJI[poi.category]}
@@ -43,7 +63,7 @@ function PoiThumbnail({
     <img
       src={src}
       alt={poi.name}
-      className="h-14 w-14 rounded-xl object-cover shrink-0 bg-gray-100"
+      className="h-20 w-20 rounded-2xl object-cover shrink-0 bg-gray-100"
       onError={() => setStage((s) => (s === 0 && fallbackImageUrl ? 1 : 2))}
     />
   );
@@ -197,18 +217,24 @@ export function TripView({
                   {poiIds.length === 0 ? (
                     <p className="text-sm text-gray-300">Nessuna tappa</p>
                   ) : (
-                    <ul className="space-y-3">
+                    <ul className="space-y-2.5">
                       {poiIds.map((id) => {
                         const poi = poiById.get(id);
                         if (!poi) return null;
                         const showRating = RATING_VISIBLE_CATEGORIES.has(poi.category);
                         return (
-                          <li key={id} className="flex items-center gap-3">
+                          <li
+                            key={id}
+                            className="flex items-center gap-3 bg-gray-50 rounded-2xl p-2.5"
+                          >
                             <PoiThumbnail poi={poi} fallbackImageUrl={poiFallbackImageUrl} />
                             <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium truncate">{poi.name}</p>
+                              <p className="text-sm font-semibold truncate">{poi.name}</p>
+                              {poi.description && (
+                                <p className="text-xs text-gray-400 truncate">{poi.description}</p>
+                              )}
                               {showRating && (poi.rating || poi.priceLevel) && (
-                                <p className="text-xs text-gray-400 flex items-center gap-1.5">
+                                <p className="text-xs text-gray-400 flex items-center gap-1.5 mt-0.5">
                                   {poi.rating && <span>⭐ {poi.rating.toFixed(1)}</span>}
                                   {poi.priceLevel && <span>{"$".repeat(poi.priceLevel)}</span>}
                                 </p>

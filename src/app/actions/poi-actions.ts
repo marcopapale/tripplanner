@@ -4,7 +4,7 @@ import { nanoid } from "nanoid";
 import { getPOIs, savePOIs, getTrips, upsertTrip, getSettings } from "@/lib/db";
 import { POI, POICategory, POI_CATEGORY_DEFAULT_SLOTS, Slot } from "@/lib/types";
 import { searchPOIsInBounds, MapBounds } from "@/lib/poiDiscovery";
-import { searchGooglePOIsInBounds } from "@/lib/googlePlacesPOI";
+import { searchGooglePOIsInBounds, fetchPlacePhotoUrl } from "@/lib/googlePlacesPOI";
 
 export interface NewPOIInput {
   tripId: string;
@@ -98,4 +98,31 @@ export async function findOrCreatePOI(input: NewPOIInput): Promise<POI> {
   const existing = pois.find((p) => p.tripId === input.tripId && isSamePlace(input, p));
   if (existing) return existing;
   return addPOI(input);
+}
+
+/**
+ * Backfill una tantum: POI collegati a un placeId Google ma catalogati
+ * prima che esistesse photoUrl (o creati per un percorso che non la
+ * popolava ancora) non hanno mai una foto. Chiamata dal client la prima
+ * volta che una card la trova mancante; il risultato viene salvato sul POI
+ * così i caricamenti successivi non rifanno la chiamata a Google.
+ */
+export async function backfillPoiPhoto(poiId: string): Promise<string | undefined> {
+  const pois = await getPOIs();
+  const poi = pois.find((p) => p.id === poiId);
+  if (!poi || poi.photoUrl || !poi.placeId) return poi?.photoUrl;
+
+  const settings = await getSettings();
+  if (!settings.googleApiKey) return undefined;
+
+  const photoUrl = await fetchPlacePhotoUrl(
+    poi.placeId,
+    settings.googleApiKey,
+    settings.googleMapsBrowserKey
+  );
+  if (!photoUrl) return undefined;
+
+  poi.photoUrl = photoUrl;
+  await savePOIs(pois);
+  return photoUrl;
 }

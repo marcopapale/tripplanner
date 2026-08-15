@@ -203,3 +203,31 @@ export async function searchGooglePOIsInBounds(
   }
   return results;
 }
+
+/**
+ * Recupera la foto per un placeId già noto (backfill per POI catalogati
+ * prima che questo campo esistesse, o creati senza passare dai percorsi
+ * che già la popolano). Chiamata "una tantum": il chiamante è responsabile
+ * di salvare il risultato sul POI così le volte successive non serve rifare
+ * la chiamata.
+ */
+export async function fetchPlacePhotoUrl(
+  placeId: string,
+  apiKey: string,
+  browserKey?: string
+): Promise<string | undefined> {
+  if (!browserKey) return undefined;
+  try {
+    const res = await fetch(`https://places.googleapis.com/v1/places/${placeId}`, {
+      headers: {
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": "photos",
+      },
+    });
+    if (!res.ok) return undefined;
+    const place: GooglePlace = await res.json();
+    return photoUrlFor(place, browserKey);
+  } catch {
+    return undefined;
+  }
+}
