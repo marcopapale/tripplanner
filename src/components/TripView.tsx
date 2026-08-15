@@ -202,7 +202,10 @@ export function TripView({
             )}
           </Card>
 
-          <div className="md:col-span-2 space-y-3 overflow-y-auto max-h-[600px] pr-1">
+          {/* Lo scroll interno (doppia scrollbar) ha senso solo su desktop,
+              dove la mappa resta fissa accanto alla lista — su mobile il
+              layout impila le due colonne e deve scorrere come la pagina. */}
+          <div className="md:col-span-2 space-y-3 md:overflow-y-auto md:max-h-[600px] pr-1">
             <p className="text-sm text-gray-500 px-1">
               Il programma per il{" "}
               <span className="font-semibold text-gray-700">
