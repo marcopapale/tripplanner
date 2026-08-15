@@ -21,6 +21,8 @@ export function GoogleMapView({
   accommodationName,
   accommodationLat,
   accommodationLon,
+  accommodationPlaceId,
+  accommodationAddress,
 }: {
   apiKey: string;
   centerLat: number;
@@ -31,6 +33,8 @@ export function GoogleMapView({
   accommodationName?: string;
   accommodationLat?: number;
   accommodationLon?: number;
+  accommodationPlaceId?: string;
+  accommodationAddress?: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -39,6 +43,7 @@ export function GoogleMapView({
   const [ready, setReady] = useState(false);
   const [error, setError] = useState(false);
   const [selected, setSelected] = useState<MapMarker | null>(null);
+  const [accommodationSelected, setAccommodationSelected] = useState(false);
   const [selectedAnchor, setSelectedAnchor] = useState<{ x: number; y: number; below: boolean } | null>(
     null
   );
@@ -170,8 +175,8 @@ export function GoogleMapView({
   ]);
 
   return (
-    <div className="relative h-full w-full">
-      <div ref={containerRef} className="h-full w-full rounded-3xl overflow-hidden" />
+    <div className="relative h-full w-full max-w-full min-w-0 overflow-hidden">
+      <div ref={containerRef} className="h-full w-full max-w-full rounded-3xl overflow-hidden" />
       {!ready && !error && (
         <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-400 bg-white/60 rounded-3xl">
           Caricamento mappa…

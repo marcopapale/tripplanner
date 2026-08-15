@@ -165,8 +165,8 @@ export function TripView({
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto w-full px-4 py-6 flex-1 flex flex-col gap-4">
-        <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className="max-w-5xl mx-auto w-full px-4 py-6 flex-1 flex flex-col gap-4 min-w-0">
+        <div className="flex gap-2 overflow-x-auto pb-1 min-w-0 w-full">
           {trip.itinerary.map((_, i) => (
             <button
               key={i}
@@ -181,8 +181,12 @@ export function TripView({
           ))}
         </div>
 
-        <div className="grid md:grid-cols-5 gap-4 flex-1 min-h-[420px]">
-          <Card className="md:col-span-3 overflow-hidden p-0 min-h-[320px]">
+        {/* min-w-0 sugli item della grid: senza, un item non si restringe
+            mai sotto la larghezza intrinseca del suo contenuto (mappa,
+            testo lungo...) e sfonda la larghezza della pagina — bug CSS
+            grid/flex noto, non coperto dall'overflow-x:hidden su html. */}
+        <div className="grid md:grid-cols-5 gap-4 flex-1 min-h-[420px] min-w-0">
+          <Card className="md:col-span-3 overflow-hidden p-0 min-h-[320px] min-w-0">
             {googleMapsBrowserKey ? (
               <GoogleMapView
                 apiKey={googleMapsBrowserKey}
@@ -205,7 +209,7 @@ export function TripView({
           {/* Lo scroll interno (doppia scrollbar) ha senso solo su desktop,
               dove la mappa resta fissa accanto alla lista — su mobile il
               layout impila le due colonne e deve scorrere come la pagina. */}
-          <div className="md:col-span-2 space-y-3 md:overflow-y-auto md:max-h-[600px] pr-1">
+          <div className="md:col-span-2 space-y-3 md:overflow-y-auto md:max-h-[600px] pr-1 min-w-0">
             <p className="text-sm text-gray-500 px-1">
               Il programma per il{" "}
               <span className="font-semibold text-gray-700">
