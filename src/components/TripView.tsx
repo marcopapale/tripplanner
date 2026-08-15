@@ -197,6 +197,7 @@ function ParticipantsMenu({
 }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const me = participants.find((p) => p.token === currentToken);
 
   useEffect(() => {
     if (!open) return;
@@ -211,22 +212,27 @@ function ParticipantsMenu({
 
   return (
     <div className="relative" ref={containerRef}>
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex -space-x-2"
-        aria-label="Mostra partecipanti"
-      >
-        {participants.map((p) => (
-          <div
-            key={p.id}
-            className={`h-8 w-8 rounded-full text-white text-xs font-semibold flex items-center justify-center border-2 border-white ${
-              p.token === currentToken ? "bg-sunset" : "bg-lagoon"
-            }`}
-          >
-            {p.firstName[0]}
-            {p.lastName[0]}
+      <button onClick={() => setOpen((v) => !v)} className="flex" aria-label="Mostra partecipanti">
+        {/* Mobile: solo l'avatar dell'utente corrente, per non affollare l'header */}
+        {me && (
+          <div className="md:hidden h-8 w-8 rounded-full bg-sunset text-white text-xs font-semibold flex items-center justify-center border-2 border-white">
+            {me.firstName[0]}
+            {me.lastName[0]}
           </div>
-        ))}
+        )}
+        <div className={`-space-x-2 ${me ? "hidden md:flex" : "flex"}`}>
+          {participants.map((p) => (
+            <div
+              key={p.id}
+              className={`h-8 w-8 rounded-full text-white text-xs font-semibold flex items-center justify-center border-2 border-white ${
+                p.token === currentToken ? "bg-sunset" : "bg-lagoon"
+              }`}
+            >
+              {p.firstName[0]}
+              {p.lastName[0]}
+            </div>
+          ))}
+        </div>
       </button>
 
       {open && (
