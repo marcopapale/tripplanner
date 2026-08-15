@@ -29,11 +29,13 @@ export function TripView({
   pois,
   googleMapsBrowserKey,
   customMapId,
+  currentToken,
 }: {
   trip: Trip;
   pois: POI[];
   googleMapsBrowserKey?: string;
   customMapId?: string;
+  currentToken?: string;
 }) {
   const status = tripStatus(trip.startDate, trip.endDate);
   const daysLeft = daysUntilStart(trip.startDate);
@@ -97,7 +99,7 @@ export function TripView({
               </div>
             )}
 
-            <ParticipantsMenu participants={trip.participants} />
+            <ParticipantsMenu participants={trip.participants} currentToken={currentToken} />
           </div>
         </div>
       </header>
@@ -186,7 +188,13 @@ export function TripView({
   );
 }
 
-function ParticipantsMenu({ participants }: { participants: Participant[] }) {
+function ParticipantsMenu({
+  participants,
+  currentToken,
+}: {
+  participants: Participant[];
+  currentToken?: string;
+}) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -211,7 +219,9 @@ function ParticipantsMenu({ participants }: { participants: Participant[] }) {
         {participants.map((p) => (
           <div
             key={p.id}
-            className="h-8 w-8 rounded-full bg-lagoon text-white text-xs font-semibold flex items-center justify-center border-2 border-white"
+            className={`h-8 w-8 rounded-full text-white text-xs font-semibold flex items-center justify-center border-2 border-white ${
+              p.token === currentToken ? "bg-sunset" : "bg-lagoon"
+            }`}
           >
             {p.firstName[0]}
             {p.lastName[0]}
@@ -230,12 +240,19 @@ function ParticipantsMenu({ participants }: { participants: Participant[] }) {
                   key={p.id}
                   className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-sand/60"
                 >
-                  <div className="h-7 w-7 shrink-0 rounded-full bg-lagoon text-white text-[11px] font-semibold flex items-center justify-center">
+                  <div
+                    className={`h-7 w-7 shrink-0 rounded-full text-white text-[11px] font-semibold flex items-center justify-center ${
+                      p.token === currentToken ? "bg-sunset" : "bg-lagoon"
+                    }`}
+                  >
                     {p.firstName[0]}
                     {p.lastName[0]}
                   </div>
                   <span className="text-sm font-medium truncate">
                     {p.firstName} {p.lastName}
+                    {p.token === currentToken && (
+                      <span className="text-sunset-dark font-semibold"> (Tu)</span>
+                    )}
                   </span>
                 </li>
               ))}

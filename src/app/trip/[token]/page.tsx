@@ -21,6 +21,7 @@ export default async function TripPage({
       pois={pois}
       googleMapsBrowserKey={settings.googleMapsBrowserKey}
       customMapId={settings.customMapId}
+      currentToken={token}
     />
   );
 }
