@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { Trip, POI, SLOTS, SLOT_LABELS, Slot, DEFAULT_ACCENT_COLOR, Participant } from "@/lib/types";
+import { Trip, POI, POICategory, SLOTS, SLOT_LABELS, Slot, DEFAULT_ACCENT_COLOR, Participant } from "@/lib/types";
+import { CATEGORY_COLOR, CATEGORY_EMOJI } from "@/lib/mapIcons";
 import {
   daysUntilStart,
   tripStatus,
@@ -11,6 +12,42 @@ import {
   formatDayFullLabel,
 } from "@/lib/dates";
 import { Card } from "@/components/ui/Card";
+
+// Il rating ha senso solo per posti dove si mangia/beve — altrove (musei,
+// monumenti...) è rumore, non un criterio con cui l'utente li sceglie.
+const RATING_VISIBLE_CATEGORIES = new Set<POICategory>(["ristorante", "aperitivo", "vita_notturna"]);
+
+function PoiThumbnail({
+  poi,
+  fallbackImageUrl,
+}: {
+  poi: POI;
+  fallbackImageUrl?: string;
+}) {
+  const [stage, setStage] = useState<0 | 1 | 2>(poi.photoUrl ? 0 : fallbackImageUrl ? 1 : 2);
+  const src = stage === 0 ? poi.photoUrl : stage === 1 ? fallbackImageUrl : undefined;
+
+  if (!src) {
+    return (
+      <div
+        className="h-14 w-14 rounded-xl shrink-0 flex items-center justify-center text-xl"
+        style={{ background: `${CATEGORY_COLOR[poi.category]}22` }}
+      >
+        {CATEGORY_EMOJI[poi.category]}
+      </div>
+    );
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={poi.name}
+      className="h-14 w-14 rounded-xl object-cover shrink-0 bg-gray-100"
+      onError={() => setStage((s) => (s === 0 && fallbackImageUrl ? 1 : 2))}
+    />
+  );
+}
 
 const GoogleMapView = dynamic(
   () => import("@/components/GoogleMapView").then((m) => m.GoogleMapView),
@@ -30,12 +67,14 @@ export function TripView({
   googleMapsBrowserKey,
   customMapId,
   currentToken,
+  poiFallbackImageUrl,
 }: {
   trip: Trip;
   pois: POI[];
   googleMapsBrowserKey?: string;
   customMapId?: string;
   currentToken?: string;
+  poiFallbackImageUrl?: string;
 }) {
   const status = tripStatus(trip.startDate, trip.endDate);
   const daysLeft = daysUntilStart(trip.startDate);
@@ -158,24 +197,23 @@ export function TripView({
                   {poiIds.length === 0 ? (
                     <p className="text-sm text-gray-300">Nessuna tappa</p>
                   ) : (
-                    <ul className="space-y-2">
+                    <ul className="space-y-3">
                       {poiIds.map((id) => {
                         const poi = poiById.get(id);
                         if (!poi) return null;
+                        const showRating = RATING_VISIBLE_CATEGORIES.has(poi.category);
                         return (
-                          <li key={id} className="text-sm font-medium flex items-center gap-2">
-                            <span className="h-1.5 w-1.5 rounded-full bg-lagoon shrink-0" />
-                            <span className="truncate">{poi.name}</span>
-                            {poi.rating && (
-                              <span className="text-xs text-gray-400 shrink-0">
-                                ⭐ {poi.rating.toFixed(1)}
-                              </span>
-                            )}
-                            {poi.priceLevel && (
-                              <span className="text-xs text-gray-400 shrink-0">
-                                {"$".repeat(poi.priceLevel)}
-                              </span>
-                            )}
+                          <li key={id} className="flex items-center gap-3">
+                            <PoiThumbnail poi={poi} fallbackImageUrl={poiFallbackImageUrl} />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium truncate">{poi.name}</p>
+                              {showRating && (poi.rating || poi.priceLevel) && (
+                                <p className="text-xs text-gray-400 flex items-center gap-1.5">
+                                  {poi.rating && <span>⭐ {poi.rating.toFixed(1)}</span>}
+                                  {poi.priceLevel && <span>{"$".repeat(poi.priceLevel)}</span>}
+                                </p>
+                              )}
+                            </div>
                           </li>
                         );
                       })}

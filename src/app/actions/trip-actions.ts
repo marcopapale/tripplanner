@@ -115,6 +115,7 @@ export async function resolveAIPOIProposalItems(
       rating: item.rating,
       priceLevel: item.priceLevel,
       placeId: item.placeId,
+      photoUrl: item.photoUrl,
     });
     const day = trip.itinerary[item.dayIndex];
     if (day && !day[item.slot].includes(poi.id)) day[item.slot].push(poi.id);

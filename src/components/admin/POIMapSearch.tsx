@@ -32,6 +32,7 @@ interface SearchResult {
   rating?: number;
   priceLevel?: number;
   placeId?: string;
+  photoUrl?: string;
 }
 
 // Mappa approssimativa Google Place "type" -> nostra categoria, usata solo
@@ -364,7 +365,7 @@ export function POIMapSearch({
     el.addEventListener("gmp-select", async (event: google.maps.places.PlacePredictionSelectEvent) => {
       const place = event.placePrediction.toPlace();
       const { place: full } = await place.fetchFields({
-        fields: ["id", "displayName", "location", "rating", "priceLevel", "types"],
+        fields: ["id", "displayName", "location", "rating", "priceLevel", "types", "photos"],
       });
       const lat = full.location?.lat();
       const lon = full.location?.lng();
@@ -379,6 +380,8 @@ export function POIMapSearch({
         rating: full.rating ?? undefined,
         priceLevel: full.priceLevel ? PRICE_LEVEL_STRING_TO_NUMBER[full.priceLevel] : undefined,
         placeId: full.id,
+        // getURI() dell'SDK JS: URL già pronto, non serve appenderci una chiave.
+        photoUrl: full.photos?.[0]?.getURI({ maxWidth: 480 }),
       };
       setSelectedAnchor(null);
       setSelected({ kind: "result", result });
@@ -603,6 +606,7 @@ export function POIMapSearch({
                           rating: selected.result.rating,
                           priceLevel: selected.result.priceLevel,
                           placeId: selected.result.placeId,
+                          photoUrl: selected.result.photoUrl,
                         },
                         day,
                         slots

@@ -17,6 +17,7 @@ export interface NewPOIInput {
   rating?: number;
   priceLevel?: number;
   placeId?: string;
+  photoUrl?: string;
 }
 
 export async function addPOI(input: NewPOIInput): Promise<POI> {
@@ -33,6 +34,7 @@ export async function addPOI(input: NewPOIInput): Promise<POI> {
     rating: input.rating,
     priceLevel: input.priceLevel,
     placeId: input.placeId,
+    photoUrl: input.photoUrl,
   };
   await savePOIs([...pois, poi]);
   return poi;
@@ -74,7 +76,12 @@ export async function searchAreaPOIs(
 ): Promise<Omit<POI, "id" | "tripId">[]> {
   const settings = await getSettings();
   if (settings.poiProvider === "google" && settings.googleApiKey) {
-    return searchGooglePOIsInBounds(bounds, categories, settings.googleApiKey);
+    return searchGooglePOIsInBounds(
+      bounds,
+      categories,
+      settings.googleApiKey,
+      settings.googleMapsBrowserKey
+    );
   }
   return searchPOIsInBounds(bounds, categories);
 }

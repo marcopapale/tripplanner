@@ -73,6 +73,7 @@ export interface POI {
   rating?: number; // 0-5 scale
   priceLevel?: number; // 1-4 ($ to $$$$)
   placeId?: string; // Google Place ID, when sourced from Google Places — enables the rich Place UI Kit card
+  photoUrl?: string; // foto Google già pronta per l'uso (chiave browser inclusa se da REST) — assente per POI OSM/manuali
 }
 
 export interface Participant {
@@ -110,6 +111,7 @@ export interface AIPOIProposalItem {
   placeId?: string;
   rating?: number;
   priceLevel?: number;
+  photoUrl?: string;
 }
 
 export interface Trip {
@@ -155,6 +157,7 @@ export interface AppSettings {
   landingHeroImageMobileUrl?: string; // sfondo mobile, opzionale — se assente usa quello desktop
   landingLogoUrl?: string;
   landingPayoffText?: string;
+  poiFallbackImageUrl?: string; // usata nelle card mattina/pranzo/ecc. quando un POI non ha una foto Google
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {

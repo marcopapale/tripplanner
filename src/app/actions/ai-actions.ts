@@ -30,6 +30,7 @@ interface ResolvedPlace {
   placeId?: string;
   rating?: number;
   priceLevel?: number;
+  photoUrl?: string;
 }
 
 async function resolvePlace(
@@ -39,7 +40,11 @@ async function resolvePlace(
 ): Promise<ResolvedPlace | null> {
   let place: ResolvedPlace | null = null;
   if (settings.poiProvider === "google" && settings.googleApiKey) {
-    const found = await findPlaceByText(`${name}, ${trip.destination}`, settings.googleApiKey);
+    const found = await findPlaceByText(
+      `${name}, ${trip.destination}`,
+      settings.googleApiKey,
+      settings.googleMapsBrowserKey
+    );
     if (found) place = found;
   }
   if (!place) {
@@ -195,6 +200,7 @@ export async function generateAIPOIProposal(
         placeId: place.placeId,
         rating: place.rating,
         priceLevel: place.priceLevel,
+        photoUrl: place.photoUrl,
       };
       return proposal;
     })
@@ -298,6 +304,7 @@ export async function generateAIPOIProposalForSlots(
         placeId: place.placeId,
         rating: place.rating,
         priceLevel: place.priceLevel,
+        photoUrl: place.photoUrl,
       };
       return proposal;
     })

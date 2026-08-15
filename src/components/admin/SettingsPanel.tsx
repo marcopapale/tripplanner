@@ -124,7 +124,7 @@ function ImageUploadField({
   label: string;
   value: string;
   onChange: (url: string) => void;
-  field: "hero" | "heroMobile" | "logo";
+  field: "hero" | "heroMobile" | "logo" | "poiFallback";
   hint?: string;
 }) {
   const [uploading, setUploading] = useState(false);
@@ -138,9 +138,10 @@ function ImageUploadField({
     setError(null);
     try {
       const isLogo = field === "logo";
+      const maxDimension = isLogo ? 512 : field === "poiFallback" ? 800 : 2000;
       const compressed = await compressImage(
         file,
-        isLogo ? 512 : 2000,
+        maxDimension,
         isLogo && file.type === "image/png" ? "image/png" : "image/jpeg",
         0.85
       );
@@ -221,6 +222,9 @@ export function SettingsPanel({ initialSettings }: { initialSettings: AppSetting
   const [landingPayoffText, setLandingPayoffText] = useState(
     initialSettings.landingPayoffText ?? ""
   );
+  const [poiFallbackImageUrl, setPoiFallbackImageUrl] = useState(
+    initialSettings.poiFallbackImageUrl ?? ""
+  );
   const [anthropicApiKey, setAnthropicApiKey] = useState(initialSettings.anthropicApiKey ?? "");
   const [aiPoiPromptTemplate, setAiPoiPromptTemplate] = useState(
     initialSettings.aiPoiPromptTemplate || DEFAULT_AI_POI_PROMPT_TEMPLATE
@@ -242,6 +246,7 @@ export function SettingsPanel({ initialSettings }: { initialSettings: AppSetting
       landingHeroImageMobileUrl,
       landingLogoUrl,
       landingPayoffText,
+      poiFallbackImageUrl,
       anthropicApiKey,
       aiPoiPromptTemplate,
     });
@@ -437,6 +442,24 @@ export function SettingsPanel({ initialSettings }: { initialSettings: AppSetting
               </ol>
             </details>
           </div>
+        </Card>
+
+        <Card className="p-6 space-y-4">
+          <div>
+            <h2 className="text-sm font-bold text-gray-700 mb-1">Foto punti di interesse</h2>
+            <p className="text-xs text-gray-500 mb-3">
+              Nelle card mattina/pranzo/ecc. della pagina viaggio, i posti trovati su Google
+              mostrano la loro foto reale. Per gli altri (OpenStreetMap o aggiunti a mano) viene
+              usata questa immagine al posto della foto.
+            </p>
+          </div>
+          <ImageUploadField
+            label="Immagine di fallback"
+            value={poiFallbackImageUrl}
+            onChange={setPoiFallbackImageUrl}
+            field="poiFallback"
+            hint="Se vuota, viene mostrata una semplice icona colorata in base alla categoria."
+          />
         </Card>
 
         <Card className="p-6 space-y-4">

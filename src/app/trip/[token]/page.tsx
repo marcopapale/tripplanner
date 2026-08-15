@@ -22,6 +22,7 @@ export default async function TripPage({
       googleMapsBrowserKey={settings.googleMapsBrowserKey}
       customMapId={settings.customMapId}
       currentToken={token}
+      poiFallbackImageUrl={settings.poiFallbackImageUrl}
     />
   );
 }

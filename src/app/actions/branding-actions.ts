@@ -5,7 +5,7 @@ import { saveUploadedImage } from "@/lib/uploadImage";
 
 export async function uploadBrandingImage(
   formData: FormData,
-  field: "hero" | "heroMobile" | "logo"
+  field: "hero" | "heroMobile" | "logo" | "poiFallback"
 ): Promise<string> {
   if (!(await isAdmin())) throw new Error("Non autorizzato.");
 

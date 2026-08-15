@@ -12,7 +12,19 @@ import { boundsToCenterRadius } from "./mapMath";
 const SEARCH_URL = "https://places.googleapis.com/v1/places:searchNearby";
 const TEXT_SEARCH_URL = "https://places.googleapis.com/v1/places:searchText";
 const FIELD_MASK =
-  "places.id,places.displayName,places.location,places.rating,places.priceLevel,places.formattedAddress";
+  "places.id,places.displayName,places.location,places.rating,places.priceLevel,places.formattedAddress,places.photos";
+
+/**
+ * Costruisce l'URL della foto usando la chiave *browser* (mai quella server,
+ * che non è ristretta per referrer e non va esposta in un <img src> lato
+ * client). Se la chiave browser non è configurata, niente foto — fallback
+ * gestito lato UI.
+ */
+function photoUrlFor(place: GooglePlace, browserKey?: string): string | undefined {
+  const photoName = place.photos?.[0]?.name;
+  if (!photoName || !browserKey) return undefined;
+  return `https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=480&key=${browserKey}`;
+}
 
 const CATEGORY_TYPES: Partial<Record<POICategory, string[]>> = {
   monumento: ["monument", "historical_landmark", "historical_place"],
@@ -41,10 +53,12 @@ interface GooglePlace {
   formattedAddress?: string;
   rating?: number;
   priceLevel?: string;
+  photos?: { name: string }[];
 }
 
 async function searchByType(
   apiKey: string,
+  browserKey: string | undefined,
   lat: number,
   lon: number,
   radius: number,
@@ -83,6 +97,7 @@ async function searchByType(
         rating: p.rating,
         priceLevel: p.priceLevel ? PRICE_LEVEL_MAP[p.priceLevel] : undefined,
         placeId: p.id,
+        photoUrl: photoUrlFor(p, browserKey),
       }));
   } catch {
     return [];
@@ -96,12 +111,14 @@ export interface TextSearchResult {
   placeId: string;
   rating?: number;
   priceLevel?: number;
+  photoUrl?: string;
 }
 
 /** Resolves a free-text place name (e.g. an AI suggestion) to a real Google Place. */
 export async function findPlaceByText(
   query: string,
-  apiKey: string
+  apiKey: string,
+  browserKey?: string
 ): Promise<TextSearchResult | null> {
   try {
     const res = await fetch(TEXT_SEARCH_URL, {
@@ -124,6 +141,7 @@ export async function findPlaceByText(
       placeId: place.id,
       rating: place.rating,
       priceLevel: place.priceLevel ? PRICE_LEVEL_MAP[place.priceLevel] : undefined,
+      photoUrl: photoUrlFor(place, browserKey),
     };
   } catch {
     return null;
@@ -162,14 +180,15 @@ export async function testGoogleConnection(
 export async function searchGooglePOIsInBounds(
   bounds: MapBounds,
   categories: POICategory[],
-  apiKey: string
+  apiKey: string,
+  browserKey?: string
 ): Promise<DiscoveredPOI[]> {
   const { lat, lon, radius } = boundsToCenterRadius(bounds, 50000);
 
   const batches = await Promise.all(
     categories
       .filter((c) => CATEGORY_TYPES[c])
-      .map((c) => searchByType(apiKey, lat, lon, radius, CATEGORY_TYPES[c]!, c))
+      .map((c) => searchByType(apiKey, browserKey, lat, lon, radius, CATEGORY_TYPES[c]!, c))
   );
 
   const seen = new Set<string>();
