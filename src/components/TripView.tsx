@@ -132,8 +132,8 @@ export function TripView({
     >
       <header className="border-b border-gray-100 bg-white/95 backdrop-blur sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-lg font-bold">{trip.title || trip.destination}</h1>
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold break-words">{trip.title || trip.destination}</h1>
             {trip.subtitle && <p className="text-sm text-gray-500">{trip.subtitle}</p>}
             <p className="text-xs text-gray-500">
               {formatDateRange(trip.startDate, trip.endDate)}
