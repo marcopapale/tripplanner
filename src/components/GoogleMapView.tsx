@@ -80,10 +80,12 @@ export function GoogleMapView({
         mapRef.current.addListener("click", (e: google.maps.MapMouseEvent & { placeId?: string }) => {
           if (e.placeId) e.stop();
           setSelected(null);
+          setAccommodationSelected(false);
           setSelectedAnchor(null);
         });
         mapRef.current.addListener("dragstart", () => {
           setSelected(null);
+          setAccommodationSelected(false);
           setSelectedAnchor(null);
         });
         setReady(true);
@@ -116,6 +118,12 @@ export function GoogleMapView({
         position: { lat: accommodationLat, lng: accommodationLon },
         title: accommodationName || "Alloggio",
         content: el,
+      });
+      el.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        anchorToMarker(el);
+        setSelected(null);
+        setAccommodationSelected(true);
       });
       markerObjsRef.current.push(marker);
     };
@@ -156,6 +164,7 @@ export function GoogleMapView({
       el.addEventListener("click", (ev) => {
         ev.stopPropagation();
         anchorToMarker(el);
+        setAccommodationSelected(false);
         setSelected(entry);
       });
       markerObjsRef.current.push(marker);
@@ -224,6 +233,41 @@ export function GoogleMapView({
             <p className="text-xs text-lagoon-dark mt-1 clear-both">
               {selected.slots.map((s) => SLOT_LABELS[s]).join(" · ")}
             </p>
+          )}
+        </div>
+      )}
+
+      {accommodationSelected && (
+        <div
+          className="absolute z-10 w-[min(240px,85%)] max-h-[65%] overflow-y-auto rounded-2xl bg-white shadow-lg border border-gray-100 p-2.5 text-sm"
+          style={
+            selectedAnchor
+              ? {
+                  left: selectedAnchor.x,
+                  top: selectedAnchor.below ? selectedAnchor.y + 16 : selectedAnchor.y - 16,
+                  transform: selectedAnchor.below ? "translateX(-50%)" : "translate(-50%, -100%)",
+                }
+              : { left: 12, bottom: 12 }
+          }
+        >
+          <button
+            onClick={() => {
+              setAccommodationSelected(false);
+              setSelectedAnchor(null);
+            }}
+            className="float-right text-gray-400 hover:text-gray-600 text-sm"
+          >
+            ✕
+          </button>
+          {accommodationPlaceId ? (
+            <PlaceDetailsCard placeId={accommodationPlaceId} />
+          ) : (
+            <div>
+              <p className="font-semibold text-sm">{accommodationName || "Alloggio"}</p>
+              {accommodationAddress && (
+                <p className="text-xs text-gray-500">{accommodationAddress}</p>
+              )}
+            </div>
           )}
         </div>
       )}

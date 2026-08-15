@@ -78,7 +78,8 @@ const PRICE_LEVEL_STRING_TO_NUMBER: Partial<Record<string, number>> = {
 
 type Selected =
   | { kind: "catalog"; poi: POI }
-  | { kind: "result"; result: SearchResult };
+  | { kind: "result"; result: SearchResult }
+  | { kind: "accommodation" };
 
 function RatingBadge({ rating, priceLevel }: { rating?: number; priceLevel?: number }) {
   if (!rating && !priceLevel) return null;
@@ -418,6 +419,11 @@ export function POIMapSearch({
         title: trip.accommodationName || "Alloggio",
         content: el,
       });
+      el.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        anchorToMarker(el);
+        setSelected({ kind: "accommodation" });
+      });
       markerObjsRef.current.push(marker);
     }
 
@@ -567,7 +573,18 @@ export function POIMapSearch({
                 >
                   ✕
                 </button>
-                {selected.kind === "catalog" ? (
+                {selected.kind === "accommodation" ? (
+                  trip.accommodationPlaceId ? (
+                    <PlaceDetailsCard placeId={trip.accommodationPlaceId} />
+                  ) : (
+                    <div>
+                      <p className="font-semibold text-sm">{trip.accommodationName || "Alloggio"}</p>
+                      {trip.accommodationAddress && (
+                        <p className="text-xs text-gray-500">{trip.accommodationAddress}</p>
+                      )}
+                    </div>
+                  )
+                ) : selected.kind === "catalog" ? (
                   <AssignForm
                     // key: forza il remount quando si passa a un pin diverso,
                     // altrimenti giorno/fasce/"Aggiunto" scelti per il pin

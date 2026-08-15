@@ -33,6 +33,8 @@ export interface CreateTripInput {
   accommodationName?: string;
   accommodationLat?: number;
   accommodationLon?: number;
+  accommodationPlaceId?: string;
+  accommodationAddress?: string;
 }
 
 function emptyDay(): ItineraryDay {
@@ -68,6 +70,8 @@ export async function createTrip(
     accommodationName: input.accommodationName,
     accommodationLat: input.accommodationLat,
     accommodationLon: input.accommodationLon,
+    accommodationPlaceId: input.accommodationPlaceId,
+    accommodationAddress: input.accommodationAddress,
   };
 
   await upsertTrip(trip);

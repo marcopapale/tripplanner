@@ -198,6 +198,8 @@ export function TripView({
                 accommodationName={trip.accommodationName}
                 accommodationLat={trip.accommodationLat}
                 accommodationLon={trip.accommodationLon}
+                accommodationPlaceId={trip.accommodationPlaceId}
+                accommodationAddress={trip.accommodationAddress}
               />
             ) : (
               <div className="h-full w-full flex items-center justify-center text-sm text-gray-400 text-center px-4">

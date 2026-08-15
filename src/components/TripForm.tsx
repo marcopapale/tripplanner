@@ -19,6 +19,8 @@ interface Accommodation {
   name: string;
   lat: number;
   lon: number;
+  placeId?: string;
+  address?: string;
 }
 
 function emptyParticipant(): ParticipantRow {
@@ -57,11 +59,19 @@ export function TripForm({ googleMapsBrowserKey }: { googleMapsBrowserKey?: stri
 
       el.addEventListener("gmp-select", async (event: google.maps.places.PlacePredictionSelectEvent) => {
         const place = event.placePrediction.toPlace();
-        const { place: full } = await place.fetchFields({ fields: ["displayName", "location"] });
+        const { place: full } = await place.fetchFields({
+          fields: ["id", "displayName", "location", "formattedAddress"],
+        });
         const lat = full.location?.lat();
         const lon = full.location?.lng();
         if (lat == null || lon == null) return;
-        setAccommodation({ name: full.displayName ?? "Alloggio", lat, lon });
+        setAccommodation({
+          name: full.displayName ?? "Alloggio",
+          lat,
+          lon,
+          placeId: full.id,
+          address: full.formattedAddress ?? undefined,
+        });
       });
     });
 
@@ -113,6 +123,8 @@ export function TripForm({ googleMapsBrowserKey }: { googleMapsBrowserKey?: stri
         accommodationName: accommodation?.name,
         accommodationLat: accommodation?.lat,
         accommodationLon: accommodation?.lon,
+        accommodationPlaceId: accommodation?.placeId,
+        accommodationAddress: accommodation?.address,
       });
       router.push(hasAIProposal ? `/personalizza-viaggio/${tripId}` : `/admin?trip=${tripId}`);
     } catch (err) {

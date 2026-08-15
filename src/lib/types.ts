@@ -134,6 +134,8 @@ export interface Trip {
   accommodationName?: string; // Casa/B&B/Hotel scelto in fase di creazione, mostrato come pin fisso sulla mappa
   accommodationLat?: number;
   accommodationLon?: number;
+  accommodationPlaceId?: string; // se presente, il pin mostra la scheda Google Place UI Kit al click
+  accommodationAddress?: string; // fallback testuale quando manca il placeId
 }
 
 export type POIProvider = "osm" | "google";
