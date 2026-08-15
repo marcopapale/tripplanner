@@ -529,7 +529,7 @@ export function POIMapSearch({
       </button>
       {searchMsg && <p className="text-xs text-gray-400 text-center">{searchMsg}</p>}
 
-      <div className="relative rounded-3xl overflow-hidden border border-gray-100 h-[420px]">
+      <div className="relative rounded-3xl overflow-hidden border border-gray-100 h-[420px] max-w-full min-w-0">
         {!googleMapsBrowserKey ? (
           <div className="h-full w-full flex items-center justify-center text-sm text-gray-400 text-center px-6">
             Mappa non configurata: aggiungi la Google Maps API Key nelle{" "}

@@ -210,7 +210,7 @@ export function AdminDashboard({
           </Card>
         ) : (
           <>
-            <div className="flex gap-2 overflow-x-auto pb-1">
+            <div className="flex gap-2 overflow-x-auto pb-1 min-w-0">
               {trips.map((t) => (
                 <button
                   key={t.id}
@@ -250,7 +250,7 @@ export function AdminDashboard({
                   </div>
                 </details>
 
-                <div className="flex gap-2 overflow-x-auto pb-1">
+                <div className="flex gap-2 overflow-x-auto pb-1 min-w-0">
                   <button
                     onClick={() => setShowAllDays(true)}
                     className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
@@ -282,8 +282,12 @@ export function AdminDashboard({
                   ))}
                 </div>
 
-                <div className="grid md:grid-cols-5 gap-6">
-                  <div className="md:col-span-3 space-y-2">
+                {/* min-w-0 sugli item della grid: senza, un item non si
+                    restringe mai sotto la larghezza intrinseca del suo
+                    contenuto (mappa, elenco...) e sfonda la larghezza della
+                    pagina su mobile — stesso bug già corretto in TripView.tsx. */}
+                <div className="grid md:grid-cols-5 gap-6 min-w-0">
+                  <div className="md:col-span-3 space-y-2 min-w-0">
                     <h2 className="text-sm font-bold text-gray-700">
                       Cerca POI sulla mappa — assegnali a Giorno {selectedDay + 1}
                     </h2>
@@ -307,7 +311,7 @@ export function AdminDashboard({
                     />
                   </div>
 
-                  <div className="md:col-span-2 space-y-3">
+                  <div className="md:col-span-2 space-y-3 min-w-0">
                     {SLOTS.map((slot) => {
                       const assignedIds = day?.[slot] ?? [];
                       const available = tripPOIs.filter(
