@@ -8,7 +8,7 @@ import {
   tripStatus,
   currentDayIndex,
   formatDateRange,
-  formatDayLabel,
+  formatDayFullLabel,
 } from "@/lib/dates";
 import { Card } from "@/components/ui/Card";
 
@@ -116,9 +116,6 @@ export function TripView({
               style={selectedDay === i ? { background: accent } : undefined}
             >
               Giorno {i + 1}
-              <span className="ml-1.5 opacity-70 text-xs">
-                {formatDayLabel(trip.startDate, i)}
-              </span>
             </button>
           ))}
         </div>
@@ -145,6 +142,12 @@ export function TripView({
           </Card>
 
           <div className="md:col-span-2 space-y-3 overflow-y-auto max-h-[600px] pr-1">
+            <p className="text-sm text-gray-500 px-1">
+              Il programma per il{" "}
+              <span className="font-semibold text-gray-700">
+                Giorno {selectedDay + 1}, {formatDayFullLabel(trip.startDate, selectedDay)}
+              </span>
+            </p>
             {SLOTS.map((slot) => {
               const poiIds = day?.[slot] ?? [];
               return (

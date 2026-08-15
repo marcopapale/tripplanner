@@ -13,6 +13,20 @@ export function formatDayLabel(startDate: string, dayIndex: number): string {
   return format(tripDayDate(startDate, dayIndex), "d MMMM", { locale: it });
 }
 
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/** Es. "Lunedì 17 Agosto 2026" — usato nell'intestazione del programma giornaliero. */
+export function formatDayFullLabel(startDate: string, dayIndex: number): string {
+  const date = tripDayDate(startDate, dayIndex);
+  const weekday = capitalize(format(date, "EEEE", { locale: it }));
+  const day = format(date, "d", { locale: it });
+  const month = capitalize(format(date, "MMMM", { locale: it }));
+  const year = format(date, "yyyy", { locale: it });
+  return `${weekday} ${day} ${month} ${year}`;
+}
+
 export function formatDateRange(startDate: string, endDate: string): string {
   const s = format(parseISO(startDate), "d MMM yyyy", { locale: it });
   const e = format(parseISO(endDate), "d MMM yyyy", { locale: it });
