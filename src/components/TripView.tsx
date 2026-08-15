@@ -47,10 +47,12 @@ function PoiThumbnail({
 
   const src = stage === 0 ? photoUrl : stage === 1 ? fallbackImageUrl : undefined;
 
+  // Nessun arrotondamento/margine qui: l'immagine deve arrivare fino ai
+  // bordi della card che la contiene (overflow-hidden + rounded lì).
   if (!src) {
     return (
       <div
-        className="h-20 w-20 rounded-2xl shrink-0 flex items-center justify-center text-3xl"
+        className="w-28 self-stretch shrink-0 flex items-center justify-center text-4xl"
         style={{ background: `${CATEGORY_COLOR[poi.category]}22` }}
       >
         {CATEGORY_EMOJI[poi.category]}
@@ -63,7 +65,7 @@ function PoiThumbnail({
     <img
       src={src}
       alt={poi.name}
-      className="h-20 w-20 rounded-2xl object-cover shrink-0 bg-gray-100"
+      className="w-28 self-stretch shrink-0 object-cover bg-gray-100"
       onError={() => setStage((s) => (s === 0 && fallbackImageUrl ? 1 : 2))}
     />
   );
@@ -225,10 +227,10 @@ export function TripView({
                         return (
                           <li
                             key={id}
-                            className="flex items-center gap-3 bg-gray-50 rounded-2xl p-2.5"
+                            className="flex items-stretch gap-0 min-h-[92px] bg-gray-50 rounded-2xl overflow-hidden"
                           >
                             <PoiThumbnail poi={poi} fallbackImageUrl={poiFallbackImageUrl} />
-                            <div className="min-w-0 flex-1">
+                            <div className="min-w-0 flex-1 py-2.5 px-3 flex flex-col justify-center">
                               <p className="text-sm font-semibold truncate">{poi.name}</p>
                               {poi.description && (
                                 <p className="text-xs text-gray-400 truncate">{poi.description}</p>
